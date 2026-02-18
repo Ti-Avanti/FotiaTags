@@ -1,0 +1,423 @@
+# 称号定义
+# 每个称号包含以下属性:
+# - display-name: 显示名称
+# - prefix: 前缀（MiniMessage格式）
+# - suffix: 后缀（MiniMessage格式）
+# - prefix2: 前缀（PAPI变量格式，用于不支持MiniMessage的地方）
+# - suffix2: 后缀（PAPI变量格式）
+# - permission: 权限节点（可选）
+# - material: GUI物品材质（默认PAPER）
+# - item-model: 物品模型（1.21+，可选）
+# - custom-model-data: 自定义模型数据（可选）
+
+tags:
+  admin:
+    display-name: "管理员"
+    prefix: "<image:rank:admin_prefix>"
+    suffix: "<image:rank:admin_suffix>"
+    prefix2: "%image_mm_rank:admin_prefix%"
+    suffix2: "%image_mm_rank:admin_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_admin"
+    custom-model-data: 40000
+
+  vip:
+    display-name: "VIP"
+    prefix: "<image:rank:vip_prefix>"
+    suffix: "<image:rank:vip_suffix>"
+    prefix2: "%image_mm_rank:vip_prefix%"
+    suffix2: "%image_mm_rank:vip_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_vip"
+    custom-model-data: 40028
+
+  vipplus:
+    display-name: "VIP+"
+    prefix: "<image:rank:vipplus_prefix>"
+    suffix: "<image:rank:vipplus_suffix>"
+    prefix2: "%image_mm_rank:vipplus_prefix%"
+    suffix2: "%image_mm_rank:vipplus_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_vipplus"
+    custom-model-data: 40029
+
+  mvp:
+    display-name: "MVP"
+    prefix: "<image:rank:mvp_prefix>"
+    suffix: "<image:rank:mvp_suffix>"
+    prefix2: "%image_mm_rank:mvp_prefix%"
+    suffix2: "%image_mm_rank:mvp_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_mvp"
+    custom-model-data: 40017
+
+  mvpplus:
+    display-name: "MVP+"
+    prefix: "<image:rank:mvpplus_prefix>"
+    suffix: "<image:rank:mvpplus_suffix>"
+    prefix2: "%image_mm_rank:mvpplus_prefix%"
+    suffix2: "%image_mm_rank:mvpplus_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_mvpplus"
+    custom-model-data: 40018
+
+  mvpplusplus:
+    display-name: "MVP++"
+    prefix: "<image:rank:mvpplusplus_prefix>"
+    suffix: "<image:rank:mvpplusplus_suffix>"
+    prefix2: "%image_mm_rank:mvpplusplus_prefix%"
+    suffix2: "%image_mm_rank:mvpplusplus_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_mvpplusplus"
+    custom-model-data: 40019
+
+  hero:
+    display-name: "英雄"
+    prefix: "<image:rank:hero_prefix>"
+    suffix: "<image:rank:hero_suffix>"
+    prefix2: "%image_mm_rank:hero_prefix%"
+    suffix2: "%image_mm_rank:hero_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_hero"
+    custom-model-data: 40008
+
+  legend:
+    display-name: "传说"
+    prefix: "<image:rank:legend_prefix>"
+    suffix: "<image:rank:legend_suffix>"
+    prefix2: "%image_mm_rank:legend_prefix%"
+    suffix2: "%image_mm_rank:legend_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_legend"
+    custom-model-data: 40010
+
+  titan:
+    display-name: "泰坦"
+    prefix: "<image:rank:titan_prefix>"
+    suffix: "<image:rank:titan_suffix>"
+    prefix2: "%image_mm_rank:titan_prefix%"
+    suffix2: "%image_mm_rank:titan_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_titan"
+    custom-model-data: 40025
+
+  master:
+    display-name: "大师"
+    prefix: "<image:rank:master_prefix>"
+    suffix: "<image:rank:master_suffix>"
+    prefix2: "%image_mm_rank:master_prefix%"
+    suffix2: "%image_mm_rank:master_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_master"
+    custom-model-data: 40012
+
+  member:
+    display-name: "成员"
+    prefix: "<image:rank:member_prefix>"
+    suffix: "<image:rank:member_suffix>"
+    prefix2: "%image_mm_rank:member_prefix%"
+    suffix2: "%image_mm_rank:member_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_member"
+    custom-model-data: 40014
+
+  helper:
+    display-name: "助手"
+    prefix: "<image:rank:helper_prefix>"
+    suffix: "<image:rank:helper_suffix>"
+    prefix2: "%image_mm_rank:helper_prefix%"
+    suffix2: "%image_mm_rank:helper_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_helper"
+    custom-model-data: 40007
+
+  mod:
+    display-name: "版主"
+    prefix: "<image:rank:mod_prefix>"
+    suffix: "<image:rank:mod_suffix>"
+    prefix2: "%image_mm_rank:mod_prefix%"
+    suffix2: "%image_mm_rank:mod_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_mod"
+    custom-model-data: 40015
+
+  srmod:
+    display-name: "高级版主"
+    prefix: "<image:rank:srmod_prefix>"
+    suffix: "<image:rank:srmod_suffix>"
+    prefix2: "%image_mm_rank:srmod_prefix%"
+    suffix2: "%image_mm_rank:srmod_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_srmod"
+    custom-model-data: 40022
+
+  manager:
+    display-name: "经理"
+    prefix: "<image:rank:manager_prefix>"
+    suffix: "<image:rank:manager_suffix>"
+    prefix2: "%image_mm_rank:manager_prefix%"
+    suffix2: "%image_mm_rank:manager_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_manager"
+    custom-model-data: 40011
+
+  owner:
+    display-name: "服主"
+    prefix: "<image:rank:owner_prefix>"
+    suffix: "<image:rank:owner_suffix>"
+    prefix2: "%image_mm_rank:owner_prefix%"
+    suffix2: "%image_mm_rank:owner_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_owner"
+    custom-model-data: 40021
+
+  dev:
+    display-name: "开发者"
+    prefix: "<image:rank:dev_prefix>"
+    suffix: "<image:rank:dev_suffix>"
+    prefix2: "%image_mm_rank:dev_prefix%"
+    suffix2: "%image_mm_rank:dev_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_dev"
+    custom-model-data: 40003
+
+  builder:
+    display-name: "建筑师"
+    prefix: "<image:rank:builder_prefix>"
+    suffix: "<image:rank:builder_suffix>"
+    prefix2: "%image_mm_rank:builder_prefix%"
+    suffix2: "%image_mm_rank:builder_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_builder"
+    custom-model-data: 40002
+
+  staff:
+    display-name: "工作人员"
+    prefix: "<image:rank:staff_prefix>"
+    suffix: "<image:rank:staff_suffix>"
+    prefix2: "%image_mm_rank:staff_prefix%"
+    suffix2: "%image_mm_rank:staff_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_staff"
+    custom-model-data: 40023
+
+  media:
+    display-name: "媒体"
+    prefix: "<image:rank:media_prefix>"
+    suffix: "<image:rank:media_suffix>"
+    prefix2: "%image_mm_rank:media_prefix%"
+    suffix2: "%image_mm_rank:media_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_media"
+    custom-model-data: 40013
+
+  famous:
+    display-name: "名人"
+    prefix: "<image:rank:famous_prefix>"
+    suffix: "<image:rank:famous_suffix>"
+    prefix2: "%image_mm_rank:famous_prefix%"
+    suffix2: "%image_mm_rank:famous_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_famous"
+    custom-model-data: 40006
+
+  youtube:
+    display-name: "YouTube"
+    prefix: "<image:rank:youtube_prefix>"
+    suffix: "<image:rank:youtube_suffix>"
+    prefix2: "%image_mm_rank:youtube_prefix%"
+    suffix2: "%image_mm_rank:youtube_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_youtube"
+    custom-model-data: 40030
+
+  twitch:
+    display-name: "Twitch"
+    prefix: "<image:rank:twitch_prefix>"
+    suffix: "<image:rank:twitch_suffix>"
+    prefix2: "%image_mm_rank:twitch_prefix%"
+    suffix2: "%image_mm_rank:twitch_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_twitch"
+    custom-model-data: 40026
+
+  bilibili:
+    display-name: "哔哩哔哩"
+    prefix: "<image:rank:bilibili_prefix>"
+    suffix: "<image:rank:bilibili_suffix>"
+    prefix2: "%image_mm_rank:bilibili_prefix%"
+    suffix2: "%image_mm_rank:bilibili_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_bilibili"
+    custom-model-data: 40001
+
+  discord:
+    display-name: "Discord"
+    prefix: "<image:rank:discord_prefix>"
+    suffix: "<image:rank:discord_suffix>"
+    prefix2: "%image_mm_rank:discord_prefix%"
+    suffix2: "%image_mm_rank:discord_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_discord"
+    custom-model-data: 40004
+
+  twitter:
+    display-name: "Twitter"
+    prefix: "<image:rank:twitter_prefix>"
+    suffix: "<image:rank:twitter_suffix>"
+    prefix2: "%image_mm_rank:twitter_prefix%"
+    suffix2: "%image_mm_rank:twitter_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_twitter"
+    custom-model-data: 40027
+
+  tiktok:
+    display-name: "TikTok"
+    prefix: "<image:rank:tiktok_prefix>"
+    suffix: "<image:rank:tiktok_suffix>"
+    prefix2: "%image_mm_rank:tiktok_prefix%"
+    suffix2: "%image_mm_rank:tiktok_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_tiktok"
+    custom-model-data: 40024
+
+  facebook:
+    display-name: "Facebook"
+    prefix: "<image:rank:facebook_prefix>"
+    suffix: "<image:rank:facebook_suffix>"
+    prefix2: "%image_mm_rank:facebook_prefix%"
+    suffix2: "%image_mm_rank:facebook_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_facebook"
+    custom-model-data: 40005
+
+  ins:
+    display-name: "Instagram"
+    prefix: "<image:rank:ins_prefix>"
+    suffix: "<image:rank:ins_suffix>"
+    prefix2: "%image_mm_rank:ins_prefix%"
+    suffix2: "%image_mm_rank:ins_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_ins"
+    custom-model-data: 40009
+
+  old:
+    display-name: "老玩家"
+    prefix: "<image:rank:old_prefix>"
+    suffix: "<image:rank:old_suffix>"
+    prefix2: "%image_mm_rank:old_prefix%"
+    suffix2: "%image_mm_rank:old_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_old"
+    custom-model-data: 40020
+
+  # 爵位称号
+  gongjue:
+    display-name: "公爵"
+    prefix: "<image:rank:gong_prefix>"
+    suffix: "<image:rank:gong_suffix>"
+    prefix2: "%image_mm_rank:gong_prefix%"
+    suffix2: "%image_mm_rank:gong_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_gong_prefix"
+    custom-model-data: 40035
+
+  houjue:
+    display-name: "侯爵"
+    prefix: "<image:rank:hou_prefix>"
+    suffix: "<image:rank:hou_suffix>"
+    prefix2: "%image_mm_rank:hou_prefix%"
+    suffix2: "%image_mm_rank:hou_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_hou_prefix"
+    custom-model-data: 40034
+
+  bojue:
+    display-name: "伯爵"
+    prefix: "<image:rank:bo_prefix>"
+    suffix: "<image:rank:bo_suffix>"
+    prefix2: "%image_mm_rank:bo_prefix%"
+    suffix2: "%image_mm_rank:bo_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_bo_prefix"
+    custom-model-data: 40033
+
+  zijue:
+    display-name: "子爵"
+    prefix: "<image:rank:zi_prefix>"
+    suffix: "<image:rank:zi_suffix>"
+    prefix2: "%image_mm_rank:zi_prefix%"
+    suffix2: "%image_mm_rank:zi_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_zi_prefix"
+    custom-model-data: 40032
+
+  nanjue:
+    display-name: "男爵"
+    prefix: "<image:rank:nan_prefix>"
+    suffix: "<image:rank:nan_suffix>"
+    prefix2: "%image_mm_rank:nan_prefix%"
+    suffix2: "%image_mm_rank:nan_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_nan_prefix"
+    custom-model-data: 40031
+
+  prince:
+    display-name: "王子"
+    prefix: "<image:rank:prince_prefix>"
+    suffix: "<image:rank:prince_suffix>"
+    prefix2: "%image_mm_rank:prince_prefix%"
+    suffix2: "%image_mm_rank:prince_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_prince_prefix"
+    custom-model-data: 40036
+
+  king:
+    display-name: "国王"
+    prefix: "<image:rank:king_prefix>"
+    suffix: "<image:rank:king_suffix>"
+    prefix2: "%image_mm_rank:king_prefix%"
+    suffix2: "%image_mm_rank:king_suffix%"
+    permission: ""
+    material: PAPER
+    item-model: "fotia:guiitem/playertitleitem/rank/itemmodel_king_prefix"
+    custom-model-data: 40037
+
+# 默认称号（玩家没有选择称号时使用，设为空或disabled禁用）
+default-tag: member

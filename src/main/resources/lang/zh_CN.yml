@@ -1,0 +1,55 @@
+# 中文语言文件
+
+prefix: "<gray>[<gold>FotiaTags</gold>]</gray> "
+
+# 成功消息
+tag-given: "<green>成功给予 <white>{player}</white> 称号 <white>{tag}</white>，时长: <white>{duration}</white>"
+tag-removed: "<green>成功移除 <white>{player}</white> 的称号 <white>{tag}</white>"
+tag-set: "<green>成功设置 <white>{player}</white> 的当前称号为 <white>{tag}</white>"
+tag-cleared: "<green>成功清除 <white>{player}</white> 的当前称号"
+config-reloaded: "<green>配置已重载"
+export-success: "<green>成功导出 <white>{count}</white> 个称号到 <white>{file}</white>"
+export-failed: "<red>导出失败: <white>{error}</white>"
+import-success: "<green>成功导入 <white>{count}</white> 个称号（覆盖 <white>{overwritten}</white> 个）"
+import-file-not-found: "<red>找不到导入文件: <white>{file}</white>"
+import-empty: "<red>导入文件中没有称号数据"
+
+# 玩家消息
+your-tag-set: "<green>你的称号已设置为 <white>{tag}</white>"
+your-tag-cleared: "<green>你的称号已清除"
+your-tag-expired: "<yellow>你的称号 <white>{tag}</white> 已过期"
+tag-received: "<green>你获得了称号 <white>{tag}</white>，时长: <white>{duration}</white>"
+tag-lost: "<yellow>你的称号 <white>{tag}</white> 已被移除"
+
+# 错误消息
+no-permission: "<red>你没有权限执行此操作"
+player-not-found: "<red>找不到玩家 <white>{player}</white>"
+player-not-online: "<red>玩家 <white>{player}</white> 不在线"
+tag-not-found: "<red>找不到称号 <white>{tag}</white>"
+already-has-tag: "<red>玩家 <white>{player}</white> 已拥有称号 <white>{tag}</white>"
+not-own-tag: "<red>玩家 <white>{player}</white> 未拥有称号 <white>{tag}</white>"
+invalid-duration: "<red>无效的时长格式: <white>{duration}</white>"
+database-error: "<red>数据库操作失败，请查看控制台"
+
+# 列表
+tag-list-header: "<gold>===== 称号列表 ====="
+tag-list-item: "<gray>- <white>{tag}</white> <gray>({expire})"
+tag-list-footer: "<gold>共 <white>{count}</white> 个称号"
+tag-list-empty: "<gray>暂无称号"
+
+# 时长显示
+duration-permanent: "永久"
+duration-format: "{days}天{hours}小时{minutes}分钟"
+duration-expired: "已过期"
+
+# 帮助
+help-header: "<gold>===== FotiaTags 帮助 ====="
+help-give: "<yellow>/ft give <玩家> <称号> [时长] <gray>- 给予称号"
+help-remove: "<yellow>/ft remove <玩家> <称号> <gray>- 移除称号"
+help-set: "<yellow>/ft set <玩家> <称号> <gray>- 设置当前称号"
+help-list: "<yellow>/ft list [玩家] <gray>- 查看称号列表"
+help-menu: "<yellow>/ft menu <gray>- 打开称号菜单"
+help-reload: "<yellow>/ft reload <gray>- 重载配置"
+help-editor: "<yellow>/ft editor <gray>- 打开称号编辑器"
+help-export: "<yellow>/ft export <gray>- 导出称号配置"
+help-import: "<yellow>/ft import <文件名> <gray>- 导入称号配置（相同ID会覆盖）"

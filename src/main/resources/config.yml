@@ -1,0 +1,24 @@
+# FotiaTags 配置文件
+
+# 数据库配置
+database:
+  # 类型: mysql 或 sqlite
+  type: sqlite
+
+  # MySQL配置（当type为mysql时生效）
+  mysql:
+    host: localhost
+    port: 3306
+    database: minecraft
+    username: root
+    password: password
+
+# 通用设置
+settings:
+  # 默认语言
+  language: zh_CN
+  # 过期检查间隔（秒）
+  expire-check-interval: 60
+
+# 调试模式
+debug: false

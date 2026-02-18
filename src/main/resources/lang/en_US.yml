@@ -1,0 +1,55 @@
+# English Language File
+
+prefix: "<gray>[<gold>FotiaTags</gold>]</gray> "
+
+# Success messages
+tag-given: "<green>Successfully gave <white>{player}</white> the tag <white>{tag}</white>, duration: <white>{duration}</white>"
+tag-removed: "<green>Successfully removed tag <white>{tag}</white> from <white>{player}</white>"
+tag-set: "<green>Successfully set <white>{player}</white>'s current tag to <white>{tag}</white>"
+tag-cleared: "<green>Successfully cleared <white>{player}</white>'s current tag"
+config-reloaded: "<green>Configuration reloaded"
+export-success: "<green>Successfully exported <white>{count}</white> tags to <white>{file}</white>"
+export-failed: "<red>Export failed: <white>{error}</white>"
+import-success: "<green>Successfully imported <white>{count}</white> tags (<white>{overwritten}</white> overwritten)"
+import-file-not-found: "<red>Import file not found: <white>{file}</white>"
+import-empty: "<red>No tags found in import file"
+
+# Player messages
+your-tag-set: "<green>Your tag has been set to <white>{tag}</white>"
+your-tag-cleared: "<green>Your tag has been cleared"
+your-tag-expired: "<yellow>Your tag <white>{tag}</white> has expired"
+tag-received: "<green>You received the tag <white>{tag}</white>, duration: <white>{duration}</white>"
+tag-lost: "<yellow>Your tag <white>{tag}</white> has been removed"
+
+# Error messages
+no-permission: "<red>You don't have permission to do this"
+player-not-found: "<red>Player <white>{player}</white> not found"
+player-not-online: "<red>Player <white>{player}</white> is not online"
+tag-not-found: "<red>Tag <white>{tag}</white> not found"
+already-has-tag: "<red>Player <white>{player}</white> already has tag <white>{tag}</white>"
+not-own-tag: "<red>Player <white>{player}</white> doesn't own tag <white>{tag}</white>"
+invalid-duration: "<red>Invalid duration format: <white>{duration}</white>"
+database-error: "<red>Database operation failed, check console"
+
+# List
+tag-list-header: "<gold>===== Tag List ====="
+tag-list-item: "<gray>- <white>{tag}</white> <gray>({expire})"
+tag-list-footer: "<gold>Total: <white>{count}</white> tags"
+tag-list-empty: "<gray>No tags"
+
+# Duration display
+duration-permanent: "Permanent"
+duration-format: "{days}d {hours}h {minutes}m"
+duration-expired: "Expired"
+
+# Help
+help-header: "<gold>===== FotiaTags Help ====="
+help-give: "<yellow>/ft give <player> <tag> [duration] <gray>- Give a tag"
+help-remove: "<yellow>/ft remove <player> <tag> <gray>- Remove a tag"
+help-set: "<yellow>/ft set <player> <tag> <gray>- Set current tag"
+help-list: "<yellow>/ft list [player] <gray>- View tag list"
+help-menu: "<yellow>/ft menu <gray>- Open tag menu"
+help-reload: "<yellow>/ft reload <gray>- Reload config"
+help-editor: "<yellow>/ft editor <gray>- Open tag editor"
+help-export: "<yellow>/ft export <gray>- Export tag configuration"
+help-import: "<yellow>/ft import <filename> <gray>- Import tag configuration (same ID will be overwritten)"

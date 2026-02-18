@@ -1,0 +1,46 @@
+name: FotiaTags
+version: 1.0.0
+main: gg.fotia.tags.FotiaTags
+api-version: '1.20'
+author: Fotia
+description: 称号系统插件，支持跨服同步、多语言、GUI管理
+softdepend:
+  - PlaceholderAPI
+
+commands:
+  fotiatags:
+    description: FotiaTags主命令
+    aliases: [ftags, tags, tag, ft]
+    usage: /fotiatags <subcommand>
+
+permissions:
+  fotiatags.use:
+    description: 允许使用称号菜单
+    default: true
+  fotiatags.admin:
+    description: 管理员权限
+    default: op
+  fotiatags.admin.give:
+    description: 给予玩家称号
+    default: op
+  fotiatags.admin.remove:
+    description: 移除玩家称号
+    default: op
+  fotiatags.admin.set:
+    description: 设置玩家当前称号
+    default: op
+  fotiatags.admin.list:
+    description: 查看玩家称号列表
+    default: op
+  fotiatags.admin.reload:
+    description: 重载插件配置
+    default: op
+  fotiatags.admin.editor:
+    description: 使用称号编辑器
+    default: op
+  fotiatags.admin.export:
+    description: 导出称号配置
+    default: op
+  fotiatags.admin.import:
+    description: 导入称号配置
+    default: op
