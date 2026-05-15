@@ -15,6 +15,7 @@ public class Tag {
     // GUI物品配置
     private Material material;
     private String itemModel;
+    private String tooltipStyle;
     private int customModelData;
 
     public Tag(String id) {
@@ -93,6 +94,14 @@ public class Tag {
 
     public void setItemModel(String itemModel) {
         this.itemModel = itemModel;
+    }
+
+    public String getTooltipStyle() {
+        return tooltipStyle;
+    }
+
+    public void setTooltipStyle(String tooltipStyle) {
+        this.tooltipStyle = tooltipStyle;
     }
 
     public int getCustomModelData() {

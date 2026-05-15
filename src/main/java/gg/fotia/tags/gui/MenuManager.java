@@ -3,7 +3,7 @@ package gg.fotia.tags.gui;
 import gg.fotia.tags.FotiaTags;
 import gg.fotia.tags.tag.PlayerTagData;
 import gg.fotia.tags.tag.Tag;
-import gg.fotia.tags.util.TimeUtil;
+import gg.fotia.tags.util.LegacyColorConverter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -29,6 +30,8 @@ public class MenuManager implements Listener {
     private final FotiaTags plugin;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Map<UUID, MenuSession> openMenus = new HashMap<>();
+    private final Set<UUID> reopeningMenus = new HashSet<>();
+    private final boolean modernItemMetaApi;
 
     // 菜单配置
     private String menuTitle;
@@ -49,6 +52,7 @@ public class MenuManager implements Listener {
 
     public MenuManager(FotiaTags plugin) {
         this.plugin = plugin;
+        this.modernItemMetaApi = isAtLeastMinecraftVersion(1, 21, 4);
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -61,7 +65,7 @@ public class MenuManager implements Listener {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(menuFile);
 
         menuTitle = config.getString("title", "<!i>称号选择");
-        menuSize = config.getInt("size", 54);
+        menuSize = normalizeMenuSize(config.getInt("size", 54));
 
         // 加载布局
         List<String> layoutList = config.getStringList("layout");
@@ -85,12 +89,16 @@ public class MenuManager implements Listener {
         tagSlots.clear();
         List<Integer> slots = config.getIntegerList("tag-slots");
         if (slots.isEmpty()) {
-            // 默认槽位
-            for (int i = 10; i <= 16; i++) tagSlots.add(i);
-            for (int i = 19; i <= 25; i++) tagSlots.add(i);
-            for (int i = 28; i <= 34; i++) tagSlots.add(i);
+            addDefaultTagSlots();
         } else {
-            tagSlots.addAll(slots);
+            for (int slot : slots) {
+                if (isValidSlot(slot)) {
+                    tagSlots.add(slot);
+                }
+            }
+            if (tagSlots.isEmpty()) {
+                addDefaultTagSlots();
+            }
         }
 
         // 加载称号物品模板
@@ -127,8 +135,8 @@ public class MenuManager implements Listener {
         // 加载翻页配置
         ConfigurationSection paginationSection = config.getConfigurationSection("pagination");
         if (paginationSection != null) {
-            prevPageSlot = paginationSection.getInt("prev-page-slot", 45);
-            nextPageSlot = paginationSection.getInt("next-page-slot", 53);
+            prevPageSlot = normalizeSlot(paginationSection.getInt("prev-page-slot", 45), Math.min(45, menuSize - 1));
+            nextPageSlot = normalizeSlot(paginationSection.getInt("next-page-slot", 53), menuSize - 1);
 
             ConfigurationSection prevSection = paginationSection.getConfigurationSection("prev-page");
             if (prevSection != null) {
@@ -183,6 +191,41 @@ public class MenuManager implements Listener {
         plugin.getLogger().info("Menu configuration loaded!");
     }
 
+    private int normalizeMenuSize(int size) {
+        if (size < 9) {
+            return 9;
+        }
+        if (size > 54) {
+            return 54;
+        }
+        return ((size + 8) / 9) * 9;
+    }
+
+    private boolean isValidSlot(int slot) {
+        return slot >= 0 && slot < menuSize;
+    }
+
+    private int normalizeSlot(int slot, int fallback) {
+        return isValidSlot(slot) ? slot : Math.max(0, Math.min(fallback, menuSize - 1));
+    }
+
+    private void addDefaultTagSlots() {
+        for (int i = 10; i <= 16; i++) addTagSlotIfValid(i);
+        for (int i = 19; i <= 25; i++) addTagSlotIfValid(i);
+        for (int i = 28; i <= 34; i++) addTagSlotIfValid(i);
+        if (tagSlots.isEmpty()) {
+            for (int i = 0; i < menuSize; i++) {
+                tagSlots.add(i);
+            }
+        }
+    }
+
+    private void addTagSlotIfValid(int slot) {
+        if (isValidSlot(slot)) {
+            tagSlots.add(slot);
+        }
+    }
+
     private MenuItemConfig loadMenuItemConfig(ConfigurationSection section) {
         MenuItemConfig config = new MenuItemConfig();
         config.material = Material.matchMaterial(section.getString("material", "STONE"));
@@ -190,7 +233,7 @@ public class MenuManager implements Listener {
         config.name = section.getString("name", "");
         config.lore = section.getStringList("lore");
         config.itemModel = section.getString("item_model");
-        config.tooltip = section.getString("tooltip");
+        config.tooltip = section.getString("tooltip-style", section.getString("tooltip"));
         config.glow = section.getBoolean("glow", false);
         config.actions = section.getStringList("actions");
         return config;
@@ -284,8 +327,14 @@ public class MenuManager implements Listener {
         inventory.setItem(nextPageSlot, nextItem);
 
         // 保存会话
-        openMenus.put(player.getUniqueId(), new MenuSession("tag-select", page));
-        player.openInventory(inventory);
+        UUID uuid = player.getUniqueId();
+        reopeningMenus.add(uuid);
+        try {
+            openMenus.put(uuid, new MenuSession("tag-select", page));
+            player.openInventory(inventory);
+        } finally {
+            reopeningMenus.remove(uuid);
+        }
     }
 
     private ItemStack setPageAction(ItemStack item, String action) {
@@ -335,12 +384,12 @@ public class MenuManager implements Listener {
             meta.lore(lore);
         }
 
-        // 设置item_model (1.21+ API，使用反射兼容)
+        // 设置item_model（1.21.4+）
         if (config.itemModel != null && !config.itemModel.isEmpty()) {
             setItemModelCompat(meta, config.itemModel);
         }
 
-        // 设置tooltip (1.21+ API，使用反射兼容)
+        // 设置tooltip（1.21.4+）
         if (config.tooltip != null && !config.tooltip.isEmpty()) {
             setTooltipStyleCompat(meta, config.tooltip);
         }
@@ -364,7 +413,7 @@ public class MenuManager implements Listener {
 
         // 替换占位符
         String name = template.name
-                .replace("%tag_name%", tag.getDisplayName())
+                .replace("%tag_name%", LegacyColorConverter.convertToMiniMessage(tag.getDisplayName()))
                 .replace("%tag_id%", tag.getId());
         meta.displayName(miniMessage.deserialize("<!i>" + name));
 
@@ -372,13 +421,13 @@ public class MenuManager implements Listener {
         if (template.lore != null && !template.lore.isEmpty()) {
             List<Component> lore = new ArrayList<>();
             long expireTime = data != null ? data.getTagExpireTime(tag.getId()) : -1;
-            String expireStr = TimeUtil.formatExpireTime(expireTime);
+            String expireStr = plugin.getMessageManager().formatExpireTime(expireTime);
 
             for (String line : template.lore) {
-                line = line.replace("%tag_name%", tag.getDisplayName())
+                line = line.replace("%tag_name%", LegacyColorConverter.convertToMiniMessage(tag.getDisplayName()))
                         .replace("%tag_id%", tag.getId())
-                        .replace("%tag_prefix%", tag.getPrefix())
-                        .replace("%tag_suffix%", tag.getSuffix())
+                        .replace("%tag_prefix%", LegacyColorConverter.convertToMiniMessage(tag.getPrefix()))
+                        .replace("%tag_suffix%", LegacyColorConverter.convertToMiniMessage(tag.getSuffix()))
                         .replace("%tag_expire%", expireStr);
                 lore.add(miniMessage.deserialize("<!i>" + line));
             }
@@ -401,9 +450,13 @@ public class MenuManager implements Listener {
             meta.setCustomModelData(tag.getCustomModelData());
         }
 
-        // 设置tooltip (1.21+ API，使用反射兼容)
-        if (template.tooltip != null && !template.tooltip.isEmpty()) {
-            setTooltipStyleCompat(meta, template.tooltip);
+        String tooltipStyle = tag.getTooltipStyle();
+        if (tooltipStyle == null || tooltipStyle.isEmpty()) {
+            tooltipStyle = template.tooltip;
+        }
+        // 设置tooltip（1.21.4+）
+        if (tooltipStyle != null && !tooltipStyle.isEmpty()) {
+            setTooltipStyleCompat(meta, tooltipStyle);
         }
 
         // 设置发光
@@ -599,48 +652,76 @@ public class MenuManager implements Listener {
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (event.getPlayer() instanceof Player player) {
-            openMenus.remove(player.getUniqueId());
+            UUID uuid = player.getUniqueId();
+            if (reopeningMenus.contains(uuid)) {
+                return;
+            }
+            openMenus.remove(uuid);
         }
     }
 
-    // 兼容1.20.4的方法 - setItemModel在1.21+才有
+    private boolean isAtLeastMinecraftVersion(int major, int minor, int patch) {
+        String version = Bukkit.getBukkitVersion().split("-", 2)[0];
+        String[] parts = version.split("\\.");
+        int actualMajor = parts.length > 0 ? parseVersionPart(parts[0]) : 0;
+        int actualMinor = parts.length > 1 ? parseVersionPart(parts[1]) : 0;
+        int actualPatch = parts.length > 2 ? parseVersionPart(parts[2]) : 0;
+
+        if (actualMajor != major) {
+            return actualMajor > major;
+        }
+        if (actualMinor != minor) {
+            return actualMinor > minor;
+        }
+        return actualPatch >= patch;
+    }
+
+    private int parseVersionPart(String part) {
+        int end = 0;
+        while (end < part.length() && Character.isDigit(part.charAt(end))) {
+            end++;
+        }
+        if (end == 0) {
+            return 0;
+        }
+        return Integer.parseInt(part.substring(0, end));
+    }
+
+    // 兼容1.20.4的方法 - setItemModel在1.21.4+才有
     private void setItemModelCompat(ItemMeta meta, String itemModel) {
-        try {
-            NamespacedKey key = NamespacedKey.fromString(itemModel);
-            if (key != null) {
-                java.lang.reflect.Method method = meta.getClass().getMethod("setItemModel", NamespacedKey.class);
-                method.invoke(meta, key);
-            }
-        } catch (Exception ignored) {
-            // 1.20.4不支持此API，忽略
+        if (!modernItemMetaApi) {
+            return;
+        }
+
+        NamespacedKey key = NamespacedKey.fromString(itemModel);
+        if (key != null) {
+            meta.setItemModel(key);
         }
     }
 
-    // 兼容1.20.4的方法 - setTooltipStyle在1.21+才有
+    // 兼容1.20.4的方法 - setTooltipStyle在1.21.4+才有
     private void setTooltipStyleCompat(ItemMeta meta, String tooltip) {
-        try {
-            NamespacedKey key = NamespacedKey.fromString(tooltip);
-            if (key != null) {
-                java.lang.reflect.Method method = meta.getClass().getMethod("setTooltipStyle", NamespacedKey.class);
-                method.invoke(meta, key);
-            }
-        } catch (Exception ignored) {
-            // 1.20.4不支持此API，忽略
+        if (!modernItemMetaApi) {
+            return;
+        }
+
+        NamespacedKey key = NamespacedKey.fromString(tooltip);
+        if (key != null) {
+            meta.setTooltipStyle(key);
         }
     }
 
-    // 兼容1.20.4的方法 - setEnchantmentGlintOverride在1.21+才有
+    // 兼容1.20.4的方法 - setEnchantmentGlintOverride在1.21.4+才有
     private void setGlowCompat(ItemMeta meta) {
-        try {
-            // 尝试1.21+ API
-            java.lang.reflect.Method method = meta.getClass().getMethod("setEnchantmentGlintOverride", Boolean.class);
-            method.invoke(meta, true);
-        } catch (Exception e) {
-            // 1.20.4使用附魔+隐藏附魔标志实现发光
-            try {
-                meta.addEnchant(org.bukkit.enchantments.Enchantment.DURABILITY, 1, true);
-                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-            } catch (Exception ignored) {}
+        if (modernItemMetaApi) {
+            meta.setEnchantmentGlintOverride(true);
+            return;
+        }
+
+        Enchantment unbreaking = Enchantment.getByKey(NamespacedKey.minecraft("unbreaking"));
+        if (unbreaking != null) {
+            meta.addEnchant(unbreaking, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
     }
 

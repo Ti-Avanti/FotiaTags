@@ -8,7 +8,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MessageManager {
@@ -25,7 +27,7 @@ public class MessageManager {
     }
 
     public void reload() {
-        this.currentLang = plugin.getConfigManager().getConfig().getString("language", "zh_CN");
+        this.currentLang = plugin.getConfigManager().getConfig().getString("settings.language", "zh_CN");
         File langFile = new File(plugin.getDataFolder(), "lang/" + currentLang + ".yml");
         if (!langFile.exists()) {
             langFile = new File(plugin.getDataFolder(), "lang/zh_CN.yml");
@@ -35,6 +37,10 @@ public class MessageManager {
 
     public String getRaw(String key) {
         return langConfig.getString(key, key);
+    }
+
+    public String getRaw(String key, String defaultValue) {
+        return langConfig.getString(key, defaultValue);
     }
 
     public String getRaw(String key, Map<String, String> placeholders) {
@@ -75,6 +81,57 @@ public class MessageManager {
 
     public void send(org.bukkit.command.CommandSender sender, String key, String... args) {
         sender.sendMessage(get(key, of(args)));
+    }
+
+    public String formatDuration(long millis) {
+        if (millis == -1) {
+            return getDurationText("duration-permanent", "永久", "Permanent");
+        }
+
+        long seconds = Math.max(0, millis / 1000);
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        long days = hours / 24;
+
+        List<String> parts = new ArrayList<>();
+        if (days > 0) {
+            addDurationPart(parts, days, getDurationText("duration-day", "天", "d"));
+            addDurationPart(parts, hours % 24, getDurationText("duration-hour", "小时", "h"));
+        } else if (hours > 0) {
+            addDurationPart(parts, hours, getDurationText("duration-hour", "小时", "h"));
+            addDurationPart(parts, minutes % 60, getDurationText("duration-minute", "分钟", "m"));
+        } else if (minutes > 0) {
+            addDurationPart(parts, minutes, getDurationText("duration-minute", "分钟", "m"));
+            addDurationPart(parts, seconds % 60, getDurationText("duration-second", "秒", "s"));
+        } else {
+            addDurationPart(parts, seconds, getDurationText("duration-second", "秒", "s"));
+        }
+
+        return String.join(getDurationText("duration-separator", "", " "), parts);
+    }
+
+    public String formatExpireTime(long expireTime) {
+        if (expireTime == -1) {
+            return getDurationText("duration-permanent", "永久", "Permanent");
+        }
+
+        long remaining = expireTime - System.currentTimeMillis();
+        if (remaining <= 0) {
+            return getDurationText("duration-expired", "已过期", "Expired");
+        }
+
+        return formatDuration(remaining);
+    }
+
+    private void addDurationPart(List<String> parts, long value, String unit) {
+        if (value > 0 || parts.isEmpty()) {
+            parts.add(value + unit);
+        }
+    }
+
+    private String getDurationText(String key, String zhFallback, String enFallback) {
+        String fallback = currentLang != null && currentLang.toLowerCase().startsWith("zh") ? zhFallback : enFallback;
+        return getRaw(key, fallback);
     }
 
     public static Map<String, String> of(String... args) {

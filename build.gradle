@@ -1,14 +1,14 @@
 plugins {
     id 'java'
-    id 'com.gradleup.shadow' version '8.3.0'
+    id 'com.gradleup.shadow' version '9.4.1'
 }
 
 group = 'gg.fotia'
-version = '1.0.0'
+version = '1.0.4'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -19,26 +19,26 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
     compileOnly 'me.clip:placeholderapi:2.11.6'
 
     implementation 'com.zaxxer:HikariCP:5.1.0'
+    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+    implementation 'com.mysql:mysql-connector-j:8.4.0'
 }
 
 processResources {
-    def props = [version: version]
-    inputs.properties props
+    inputs.property 'version', version
     filteringCharset 'UTF-8'
     filesMatching('plugin.yml') {
-        expand props
+        expand version: version, project: [version: version]
     }
 }
 
 shadowJar {
     archiveClassifier.set('')
     relocate 'com.zaxxer.hikari', 'gg.fotia.tags.libs.hikari'
-
-    minimize()
+    mergeServiceFiles()
 }
 
 tasks.named('build') {

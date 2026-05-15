@@ -20,5 +20,40 @@ settings:
   # 过期检查间隔（秒）
   expire-check-interval: 60
 
+# 玩家显示功能
+# 开启后可以把当前称号直接显示到玩家头顶名牌、Tab列表名字和聊天格式中。
+player-display:
+  # 总开关，默认关闭，避免和服务器已有的聊天/名牌/Tab插件冲突
+  enabled: false
+
+  # 可用变量:
+  # {name} 或 {player} = 玩家原名
+  # {prefix} = 当前称号前缀（MiniMessage或旧版颜色代码均可）
+  # {suffix} = 当前称号后缀（MiniMessage或旧版颜色代码均可）
+  # {prefix2} = 当前称号前缀2
+  # {suffix2} = 当前称号后缀2
+  # {tag} = 当前称号ID
+  # {tag_name} = 当前称号显示名
+
+  # 头顶名牌设置
+  name-tag:
+    # 是否启用头顶名牌显示
+    enabled: true
+    # 是否直接修改玩家头顶NameTag；开启后使用计分板Team，可能会和其他名牌/队伍插件冲突
+    direct: true
+    # 头顶名牌需要保留{name}或{player}，变量可放在名字前后
+    format: "<!i>{prefix}{name}{suffix}"
+
+  # Tab列表名字设置
+  tab:
+    enabled: true
+    format: "<!i>{prefix}{name}{suffix}"
+
+  # 聊天格式设置
+  chat:
+    enabled: true
+    # {message} = 玩家发送的聊天内容
+    format: "<!i>{prefix}{name}{suffix}<gray>: <white>{message}"
+
 # 调试模式
 debug: false

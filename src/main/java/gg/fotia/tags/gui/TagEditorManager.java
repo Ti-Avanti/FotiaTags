@@ -168,6 +168,9 @@ public class TagEditorManager implements Listener {
         // custom-model-data
         inv.setItem(30, createEditItem(Material.COMMAND_BLOCK, "<white><!i>自定义模型数据", String.valueOf(tag.getCustomModelData()), "custom_model_data"));
 
+        // tooltip-style
+        inv.setItem(31, createEditItem(Material.PAINTING, "<white><!i>提示样式 (tooltip-style)", tag.getTooltipStyle() != null ? tag.getTooltipStyle() : "", "tooltip_style"));
+
         // 删除按钮
         ItemStack delete = createItem(Material.RED_CONCRETE, "<red><!i>删除称号", "<gray>点击删除此称号", "", "<red>此操作不可撤销！");
         setAction(delete, "delete_tag");
@@ -443,6 +446,7 @@ public class TagEditorManager implements Listener {
             case "permission" -> "权限节点";
             case "material" -> "物品材质 (如 PAPER, DIAMOND)";
             case "item_model" -> "物品模型 (如 fotia:xxx)";
+            case "tooltip_style" -> "提示样式 (如 minecraft:rarity/legendary)";
             case "custom_model_data" -> "自定义模型数据 (数字)";
             default -> field;
         };
@@ -471,11 +475,13 @@ public class TagEditorManager implements Listener {
             return;
         }
 
-        if (inputSession.field.equals("new_tag_id")) {
-            handleCreateNewTag(player, input);
-        } else {
-            handleEditField(player, inputSession.tagId, inputSession.field, input);
-        }
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (inputSession.field.equals("new_tag_id")) {
+                handleCreateNewTag(player, input);
+            } else {
+                handleEditField(player, inputSession.tagId, inputSession.field, input);
+            }
+        });
     }
 
     private void handleCreateNewTag(Player player, String tagId) {
@@ -503,6 +509,7 @@ public class TagEditorManager implements Listener {
         tagsConfig.set("tags." + tagId + ".permission", "");
         tagsConfig.set("tags." + tagId + ".material", "PAPER");
         tagsConfig.set("tags." + tagId + ".item-model", "");
+        tagsConfig.set("tags." + tagId + ".tooltip-style", "");
         tagsConfig.set("tags." + tagId + ".custom-model-data", 0);
 
         saveTagConfig();
@@ -535,6 +542,7 @@ public class TagEditorManager implements Listener {
                 tagsConfig.set(configPath + "material", mat != null ? mat.name() : "PAPER");
             }
             case "item_model" -> tagsConfig.set(configPath + "item-model", value);
+            case "tooltip_style" -> tagsConfig.set(configPath + "tooltip-style", value);
             case "custom_model_data" -> {
                 try {
                     int cmd = value.isEmpty() ? 0 : Integer.parseInt(value);

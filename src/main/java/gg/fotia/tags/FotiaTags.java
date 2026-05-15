@@ -3,6 +3,7 @@ package gg.fotia.tags;
 import gg.fotia.tags.command.TagCommand;
 import gg.fotia.tags.core.ConfigManager;
 import gg.fotia.tags.core.MessageManager;
+import gg.fotia.tags.display.PlayerDisplayManager;
 import gg.fotia.tags.gui.MenuManager;
 import gg.fotia.tags.gui.TagEditorManager;
 import gg.fotia.tags.hook.PlaceholderAPIHook;
@@ -20,6 +21,7 @@ public class FotiaTags extends JavaPlugin {
     private MessageManager messageManager;
     private DatabaseManager databaseManager;
     private TagManager tagManager;
+    private PlayerDisplayManager playerDisplayManager;
     private MenuManager menuManager;
     private TagEditorManager tagEditorManager;
 
@@ -40,6 +42,9 @@ public class FotiaTags extends JavaPlugin {
         // 初始化称号管理器
         this.tagManager = new TagManager(this);
         this.tagManager.loadTags();
+
+        // 初始化玩家显示管理器
+        this.playerDisplayManager = new PlayerDisplayManager(this);
 
         // 初始化菜单管理器
         this.menuManager = new MenuManager(this);
@@ -64,6 +69,10 @@ public class FotiaTags extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (playerDisplayManager != null) {
+            playerDisplayManager.shutdown();
+        }
+
         // 保存所有玩家数据
         if (tagManager != null) {
             tagManager.shutdown();
@@ -97,6 +106,7 @@ public class FotiaTags extends JavaPlugin {
         configManager.loadConfigs();
         messageManager.reload();
         tagManager.loadTags();
+        playerDisplayManager.reload();
         menuManager.loadMenus();
     }
 
@@ -118,6 +128,10 @@ public class FotiaTags extends JavaPlugin {
 
     public TagManager getTagManager() {
         return tagManager;
+    }
+
+    public PlayerDisplayManager getPlayerDisplayManager() {
+        return playerDisplayManager;
     }
 
     public MenuManager getMenuManager() {

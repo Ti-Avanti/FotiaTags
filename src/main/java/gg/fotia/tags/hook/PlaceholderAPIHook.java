@@ -1,6 +1,7 @@
 package gg.fotia.tags.hook;
 
 import gg.fotia.tags.FotiaTags;
+import gg.fotia.tags.util.LegacyColorConverter;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
@@ -40,7 +41,7 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
             return "";
         }
 
-        return switch (params.toLowerCase()) {
+        String result = switch (params.toLowerCase()) {
             case "prefix" -> plugin.getTagManager().getCurrentPrefix(player.getUniqueId());
             case "suffix" -> plugin.getTagManager().getCurrentSuffix(player.getUniqueId());
             case "prefix2" -> plugin.getTagManager().getCurrentPrefix2(player.getUniqueId());
@@ -50,5 +51,12 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
             case "count" -> String.valueOf(plugin.getTagManager().getOwnedTagCount(player.getUniqueId()));
             default -> null;
         };
+
+        // 转换旧版颜色代码为MiniMessage格式
+        if (result != null) {
+            result = LegacyColorConverter.convertToMiniMessage(result);
+        }
+
+        return result;
     }
 }

@@ -5,13 +5,21 @@ import gg.fotia.tags.tag.PlayerTagData;
 
 import java.io.File;
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 
 public class SQLiteManager implements DatabaseManager {
 
     private final FotiaTags plugin;
     private Connection connection;
+    private final Object lock = new Object();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "FotiaTags-SQLite");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public SQLiteManager(FotiaTags plugin) {
         this.plugin = plugin;
@@ -33,6 +41,7 @@ public class SQLiteManager implements DatabaseManager {
             plugin.getLogger().info("SQLite database connected!");
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to connect to SQLite database: " + e.getMessage());
+            throw new IllegalStateException("SQLite database initialization failed", e);
         }
     }
 
@@ -62,9 +71,19 @@ public class SQLiteManager implements DatabaseManager {
     @Override
     public void close() {
         try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
+            executor.shutdown();
+            if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
             }
+
+            synchronized (lock) {
+                if (connection != null && !connection.isClosed()) {
+                    connection.close();
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            plugin.getLogger().severe("Interrupted while closing SQLite executor: " + e.getMessage());
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to close SQLite connection: " + e.getMessage());
         }
@@ -75,6 +94,7 @@ public class SQLiteManager implements DatabaseManager {
         return CompletableFuture.supplyAsync(() -> {
             PlayerTagData data = new PlayerTagData(uuid);
 
+            synchronized (lock) {
             try {
                 // 加载当前称号
                 try (PreparedStatement stmt = connection.prepareStatement(
@@ -97,51 +117,73 @@ public class SQLiteManager implements DatabaseManager {
                 }
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load player data: " + e.getMessage());
+                throw new CompletionException(e);
+            }
             }
 
             return data;
-        });
+        }, executor);
     }
 
     @Override
     public CompletableFuture<Void> savePlayerData(PlayerTagData data) {
+        UUID uuid = data.getUuid();
+        String currentTag = data.getCurrentTag();
+        Map<String, Long> ownedTags = new HashMap<>(data.getOwnedTags());
+
         return CompletableFuture.runAsync(() -> {
+            synchronized (lock) {
             try {
+                boolean autoCommit = connection.getAutoCommit();
+                connection.setAutoCommit(false);
+
                 // 保存当前称号
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "INSERT OR REPLACE INTO fotiatags_players (uuid, current_tag, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)")) {
-                    stmt.setString(1, data.getUuid().toString());
-                    stmt.setString(2, data.getCurrentTag());
+                    stmt.setString(1, uuid.toString());
+                    stmt.setString(2, currentTag);
                     stmt.executeUpdate();
                 }
 
                 // 删除旧的称号数据
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "DELETE FROM fotiatags_owned WHERE uuid = ?")) {
-                    stmt.setString(1, data.getUuid().toString());
+                    stmt.setString(1, uuid.toString());
                     stmt.executeUpdate();
                 }
 
                 // 保存新的称号数据
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "INSERT INTO fotiatags_owned (uuid, tag_id, expire_time) VALUES (?, ?, ?)")) {
-                    for (var entry : data.getOwnedTags().entrySet()) {
-                        stmt.setString(1, data.getUuid().toString());
+                    for (var entry : ownedTags.entrySet()) {
+                        stmt.setString(1, uuid.toString());
                         stmt.setString(2, entry.getKey());
                         stmt.setLong(3, entry.getValue());
                         stmt.addBatch();
                     }
                     stmt.executeBatch();
                 }
+
+                connection.commit();
+                connection.setAutoCommit(autoCommit);
             } catch (SQLException e) {
+                try {
+                    connection.rollback();
+                    connection.setAutoCommit(true);
+                } catch (SQLException rollbackException) {
+                    plugin.getLogger().severe("Failed to rollback player data save: " + rollbackException.getMessage());
+                }
                 plugin.getLogger().severe("Failed to save player data: " + e.getMessage());
+                throw new CompletionException(e);
             }
-        });
+            }
+        }, executor);
     }
 
     @Override
     public CompletableFuture<Void> addPlayerTag(UUID uuid, String tagId, long expireTime) {
         return CompletableFuture.runAsync(() -> {
+            synchronized (lock) {
             try {
                 // 确保玩家记录存在
                 try (PreparedStatement stmt = connection.prepareStatement(
@@ -160,13 +202,16 @@ public class SQLiteManager implements DatabaseManager {
                 }
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to add player tag: " + e.getMessage());
+                throw new CompletionException(e);
             }
-        });
+            }
+        }, executor);
     }
 
     @Override
     public CompletableFuture<Void> removePlayerTag(UUID uuid, String tagId) {
         return CompletableFuture.runAsync(() -> {
+            synchronized (lock) {
             try {
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "DELETE FROM fotiatags_owned WHERE uuid = ? AND tag_id = ?")) {
@@ -184,13 +229,16 @@ public class SQLiteManager implements DatabaseManager {
                 }
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to remove player tag: " + e.getMessage());
+                throw new CompletionException(e);
             }
-        });
+            }
+        }, executor);
     }
 
     @Override
     public CompletableFuture<Void> setSelectedTag(UUID uuid, String tagId) {
         return CompletableFuture.runAsync(() -> {
+            synchronized (lock) {
             try {
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "INSERT OR REPLACE INTO fotiatags_players (uuid, current_tag, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)")) {
@@ -200,7 +248,9 @@ public class SQLiteManager implements DatabaseManager {
                 }
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to set selected tag: " + e.getMessage());
+                throw new CompletionException(e);
             }
-        });
+            }
+        }, executor);
     }
 }

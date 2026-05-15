@@ -95,7 +95,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
 
         // 解析时长
         long duration = TimeUtil.parseDuration(durationStr);
-        if (duration == Long.MIN_VALUE) {
+        if (duration == Long.MIN_VALUE || (duration != -1 && duration > Long.MAX_VALUE - System.currentTimeMillis())) {
             if (sender instanceof Player p) {
                 plugin.getMessageManager().send(p, "invalid-duration",
                         MessageManager.of("duration", durationStr));
@@ -120,7 +120,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         // 给予称号
         plugin.getTagManager().giveTag(target.getUniqueId(), tagId, duration);
 
-        String durationDisplay = duration == -1 ? "永久" : TimeUtil.formatDuration(duration);
+        String durationDisplay = plugin.getMessageManager().formatDuration(duration);
         if (sender instanceof Player p) {
             plugin.getMessageManager().send(p, "tag-given",
                     MessageManager.of("player", playerName, "tag", tag.getDisplayName(), "duration", durationDisplay));
@@ -287,7 +287,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                     Tag tag = plugin.getTagManager().getTag(tagId);
                     String tagName = tag != null ? tag.getDisplayName() : tagId;
                     long expireTime = data.getTagExpireTime(tagId);
-                    String expireStr = TimeUtil.formatExpireTime(expireTime);
+                    String expireStr = plugin.getMessageManager().formatExpireTime(expireTime);
 
                     plugin.getMessageManager().send(p, "tag-list-item",
                             MessageManager.of("tag", tagName, "expire", expireStr));
@@ -411,7 +411,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             if (sender instanceof Player p) {
                 plugin.getMessageManager().send(p, "help-import");
             } else {
-                sender.sendMessage("Usage: /fotiatags import <filename>");
+                sender.sendMessage("Usage: /fotiatags import <filename> [replace]");
             }
             return;
         }
@@ -420,6 +420,9 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         if (!fileName.endsWith(".yml")) {
             fileName += ".yml";
         }
+
+        // 检查是否为完全替换模式
+        boolean replaceMode = args.length > 2 && args[2].equalsIgnoreCase("replace");
 
         // 先在export文件夹找，再在插件根目录找
         File importFile = new File(plugin.getDataFolder(), "export/" + fileName);
@@ -453,6 +456,21 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         YamlConfiguration tagsConfig = (YamlConfiguration) plugin.getConfigManager().getTagsConfig();
         int importedCount = 0;
         int overwrittenCount = 0;
+        int deletedCount = 0;
+
+        // 如果是替换模式，先删除不在导入文件中的称号
+        if (replaceMode) {
+            ConfigurationSection currentTags = tagsConfig.getConfigurationSection("tags");
+            if (currentTags != null) {
+                Set<String> importTagIds = importTags.getKeys(false);
+                for (String existingTagId : new HashSet<>(currentTags.getKeys(false))) {
+                    if (!importTagIds.contains(existingTagId)) {
+                        tagsConfig.set("tags." + existingTagId, null);
+                        deletedCount++;
+                    }
+                }
+            }
+        }
 
         for (String tagId : importTags.getKeys(false)) {
             ConfigurationSection tagSection = importTags.getConfigurationSection(tagId);
@@ -470,6 +488,11 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             importedCount++;
         }
 
+        // 导入default-tag配置
+        if (importConfig.contains("default-tag")) {
+            tagsConfig.set("default-tag", importConfig.getString("default-tag"));
+        }
+
         // 保存配置
         plugin.getConfigManager().saveTagsConfig();
 
@@ -477,10 +500,19 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         plugin.getTagManager().loadTags();
 
         if (sender instanceof Player p) {
-            plugin.getMessageManager().send(p, "import-success",
-                    MessageManager.of("count", String.valueOf(importedCount), "overwritten", String.valueOf(overwrittenCount)));
+            if (replaceMode) {
+                plugin.getMessageManager().send(p, "import-replace-success",
+                        MessageManager.of("count", String.valueOf(importedCount), "overwritten", String.valueOf(overwrittenCount), "deleted", String.valueOf(deletedCount)));
+            } else {
+                plugin.getMessageManager().send(p, "import-success",
+                        MessageManager.of("count", String.valueOf(importedCount), "overwritten", String.valueOf(overwrittenCount)));
+            }
         } else {
-            sender.sendMessage("Imported " + importedCount + " tags (" + overwrittenCount + " overwritten)");
+            if (replaceMode) {
+                sender.sendMessage("Imported " + importedCount + " tags (" + overwrittenCount + " overwritten, " + deletedCount + " deleted)");
+            } else {
+                sender.sendMessage("Imported " + importedCount + " tags (" + overwrittenCount + " overwritten)");
+            }
         }
     }
 
@@ -566,6 +598,11 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 }
                 completions.addAll(plugin.getTagManager().getTags().keySet());
                 return completions.stream()
+                        .filter(s -> s.toLowerCase().startsWith(args[2].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+            if (subCommand.equals("import")) {
+                return Collections.singletonList("replace").stream()
                         .filter(s -> s.toLowerCase().startsWith(args[2].toLowerCase()))
                         .collect(Collectors.toList());
             }

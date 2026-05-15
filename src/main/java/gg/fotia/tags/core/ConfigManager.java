@@ -6,9 +6,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 
 public class ConfigManager {
 
@@ -24,6 +21,8 @@ public class ConfigManager {
         // 加载主配置
         plugin.saveDefaultConfig();
         plugin.reloadConfig();
+        plugin.getConfig().options().copyDefaults(true);
+        plugin.saveConfig();
         this.config = plugin.getConfig();
 
         // 加载称号配置
