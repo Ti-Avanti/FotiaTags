@@ -1,0 +1,20 @@
+# 间隔爆发粒子模板
+
+display-name: "<light_purple><!i>间隔爆发"
+enabled: true
+
+type: FIREWORK
+style: burst
+
+interval-ticks: 40
+amount: 10
+radius: 0.5
+y-offset: 1.2
+speed: 0.02
+
+gui:
+  material: FIREWORK_ROCKET
+  custom-model-data: 0
+  item-model: ""
+  tooltip-style: ""
+  glow: false

@@ -1,0 +1,26 @@
+# 头顶光环粒子模板
+
+display-name: "<yellow><!i>头顶光环"
+enabled: true
+
+# Bukkit 粒子名称，支持 END_ROD、FLAME、CLOUD、CRIT 等不需要额外数据的粒子
+type: END_ROD
+style: halo
+
+# 每多少 tick 播放一次
+interval-ticks: 8
+# 每次生成多少个粒子点
+amount: 8
+# 光环半径
+radius: 0.8
+# 相对玩家脚底的高度
+y-offset: 2.2
+# 粒子速度
+speed: 0.01
+
+gui:
+  material: BLAZE_POWDER
+  custom-model-data: 0
+  item-model: ""
+  tooltip-style: ""
+  glow: false

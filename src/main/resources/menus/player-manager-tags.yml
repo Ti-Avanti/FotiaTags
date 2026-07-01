@@ -1,0 +1,117 @@
+# 玩家称号管理二级菜单
+title: "<gold><!i>%player% 的称号 <gray>(%page%/%total_pages%)"
+size: 54
+
+placeholder-texts:
+  none: "<gray>无"
+  yes: "<green>有"
+  no: "<red>无"
+  custom: "<light_purple>自定义"
+  normal: "<aqua>普通"
+
+# 可用占位符:
+# %player% = 被管理玩家
+# %uuid% = 被管理玩家UUID
+# %current_tag% = 当前佩戴称号
+# %page% = 当前页
+# %total_pages% = 总页数
+layout:
+  - "XXXXXXXXX"
+  - "X       X"
+  - "X       X"
+  - "X       X"
+  - "X       X"
+  - "BXXPCXXN"
+
+tag-slots:
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+  - 24
+  - 25
+  - 28
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  - 34
+  - 37
+  - 38
+  - 39
+  - 40
+  - 41
+  - 42
+  - 43
+
+tag-item:
+  selected:
+    material: NAME_TAG
+    name: "<green><!i>%tag_name% <gray>(已佩戴)"
+    lore:
+      - "<gray>ID: %tag_id%"
+      - "<gray>类型: %tag_type%"
+      - "<gray>前缀: %tag_prefix%"
+      - "<gray>后缀: %tag_suffix%"
+      - "<gray>过期: %tag_expire%"
+      - ""
+      - "<yellow>左键取消佩戴"
+      - "<red>右键删除"
+    glow: true
+  unselected:
+    material: NAME_TAG
+    name: "<white><!i>%tag_name%"
+    lore:
+      - "<gray>ID: %tag_id%"
+      - "<gray>类型: %tag_type%"
+      - "<gray>前缀: %tag_prefix%"
+      - "<gray>后缀: %tag_suffix%"
+      - "<gray>过期: %tag_expire%"
+      - ""
+      - "<yellow>左键佩戴"
+      - "<red>右键删除"
+    glow: false
+
+items:
+  X:
+    material: BLACK_STAINED_GLASS_PANE
+    name: " "
+    lore: []
+
+  B:
+    material: ARROW
+    name: "<yellow><!i>返回玩家列表"
+    lore:
+      - "<gray>点击返回"
+    action: back
+
+  P:
+    material: ARROW
+    name: "<yellow><!i>上一页"
+    lore:
+      - "<gray>当前: %page%/%total_pages%"
+    action: prev-page
+
+  N:
+    material: ARROW
+    name: "<yellow><!i>下一页"
+    lore:
+      - "<gray>当前: %page%/%total_pages%"
+    action: next-page
+
+  C:
+    material: REDSTONE
+    name: "<red><!i>清空当前称号"
+    lore:
+      - "<gray>当前: %current_tag%"
+      - "<yellow>点击清空"
+    action: clear-current

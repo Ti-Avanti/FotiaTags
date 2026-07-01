@@ -6,6 +6,8 @@ author: Fotia
 description: 称号系统插件，支持跨服同步、多语言、GUI管理
 softdepend:
   - PlaceholderAPI
+  - Vault
+  - PlayerPoints
 
 commands:
   fotiatags:
@@ -38,9 +40,15 @@ permissions:
   fotiatags.admin.editor:
     description: 使用称号编辑器
     default: op
+  fotiatags.admin.players:
+    description: 管理玩家拥有的称号
+    default: op
   fotiatags.admin.export:
     description: 导出称号配置
     default: op
   fotiatags.admin.import:
     description: 导入称号配置
     default: op
+  fotiatags.custom:
+    description: 使用自定义称号功能
+    default: true

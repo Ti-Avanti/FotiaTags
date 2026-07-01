@@ -1,0 +1,20 @@
+# 身后拖尾粒子模板
+
+display-name: "<aqua><!i>身后拖尾"
+enabled: true
+
+type: CLOUD
+style: trail
+
+interval-ticks: 4
+amount: 5
+radius: 1.2
+y-offset: 0.8
+speed: 0.01
+
+gui:
+  material: FEATHER
+  custom-model-data: 0
+  item-model: ""
+  tooltip-style: ""
+  glow: false

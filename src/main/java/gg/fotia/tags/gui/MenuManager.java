@@ -1,8 +1,10 @@
 package gg.fotia.tags.gui;
 
 import gg.fotia.tags.FotiaTags;
+import gg.fotia.tags.tag.CustomTag;
 import gg.fotia.tags.tag.PlayerTagData;
 import gg.fotia.tags.tag.Tag;
+import gg.fotia.tags.tag.TagManager;
 import gg.fotia.tags.util.LegacyColorConverter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -49,6 +51,8 @@ public class MenuManager implements Listener {
     private MenuItemConfig nextPageItem;
     private MenuItemConfig prevPageDisabledItem;
     private MenuItemConfig nextPageDisabledItem;
+    private ActionMenuConfig customTagDetailMenu;
+    private ActionMenuConfig customTagDeleteMenu;
 
     public MenuManager(FotiaTags plugin) {
         this.plugin = plugin;
@@ -188,6 +192,9 @@ public class MenuManager implements Listener {
             nextPageDisabledItem.lore = Arrays.asList("", "<gray>已经是最后一页");
         }
 
+        customTagDetailMenu = loadActionMenu("menus/custom-tag-detail.yml", defaultCustomTagDetailMenu());
+        customTagDeleteMenu = loadActionMenu("menus/custom-tag-delete.yml", defaultCustomTagDeleteMenu());
+
         plugin.getLogger().info("Menu configuration loaded!");
     }
 
@@ -226,6 +233,185 @@ public class MenuManager implements Listener {
         }
     }
 
+    private void openCustomTagDetailMenu(Player player, String customTagId, int page) {
+        if (!plugin.getCustomTagManager().isEnabled()) {
+            plugin.getMessageManager().send(player, "custom-tag-disabled");
+            return;
+        }
+
+        CustomTag customTag = plugin.getTagManager().getCustomTag(player.getUniqueId(), customTagId);
+        if (customTag == null) {
+            plugin.getMessageManager().send(player, "custom-tag-not-purchased");
+            openTagSelectMenu(player, page);
+            return;
+        }
+
+        openActionMenu(player, customTagDetailMenu, customTag, page, "custom-detail");
+    }
+
+    private void openCustomTagDeleteMenu(Player player, String customTagId, int page) {
+        if (!plugin.getCustomTagManager().isDeleteEnabled()) {
+            plugin.getMessageManager().send(player, "custom-tag-delete-disabled");
+            openCustomTagDetailMenu(player, customTagId, page);
+            return;
+        }
+
+        CustomTag customTag = plugin.getTagManager().getCustomTag(player.getUniqueId(), customTagId);
+        if (customTag == null) {
+            plugin.getMessageManager().send(player, "custom-tag-not-purchased");
+            openTagSelectMenu(player, page);
+            return;
+        }
+
+        openActionMenu(player, customTagDeleteMenu, customTag, page, "custom-delete");
+    }
+
+    private void openActionMenu(Player player, ActionMenuConfig menu, CustomTag customTag, int page, String menuType) {
+        String title = applyCustomPlaceholders(menu.title, customTag);
+        Inventory inventory = Bukkit.createInventory(null, menu.size, miniMessage.deserialize("<!i>" + title));
+
+        for (int row = 0; row < menu.layout.size() && row < menu.size / 9; row++) {
+            String rowLayout = menu.layout.get(row);
+            for (int col = 0; col < rowLayout.length() && col < 9; col++) {
+                char key = rowLayout.charAt(col);
+                if (key == ' ') {
+                    continue;
+                }
+                MenuItemConfig itemConfig = menu.items.get(key);
+                if (itemConfig == null || shouldHideCustomActionItem(itemConfig)) {
+                    continue;
+                }
+                ItemStack item = createCustomActionItem(itemConfig, customTag);
+                if (item != null) {
+                    inventory.setItem(row * 9 + col, item);
+                }
+            }
+        }
+
+        UUID uuid = player.getUniqueId();
+        reopeningMenus.add(uuid);
+        try {
+            openMenus.put(uuid, new MenuSession(menuType, page, customTag.getId()));
+            player.openInventory(inventory);
+        } finally {
+            reopeningMenus.remove(uuid);
+        }
+    }
+
+    private boolean shouldHideCustomActionItem(MenuItemConfig itemConfig) {
+        return itemConfig.actions.stream().anyMatch(action -> action.equalsIgnoreCase("delete"))
+                && !plugin.getCustomTagManager().isDeleteEnabled();
+    }
+
+    private ItemStack createCustomActionItem(MenuItemConfig config, CustomTag customTag) {
+        ItemStack item = new ItemStack(config.material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+
+        meta.displayName(miniMessage.deserialize("<!i>" + applyCustomPlaceholders(config.name, customTag)));
+        if (config.lore != null && !config.lore.isEmpty()) {
+            List<Component> lore = new ArrayList<>();
+            for (String line : config.lore) {
+                String parsedLine = applyCustomPlaceholders(line, customTag);
+                if (!parsedLine.isEmpty()) {
+                    lore.add(miniMessage.deserialize("<!i>" + parsedLine));
+                }
+            }
+            meta.lore(lore);
+        }
+
+        if (config.itemModel != null && !config.itemModel.isEmpty()) {
+            setItemModelCompat(meta, applyCustomPlaceholders(config.itemModel, customTag));
+        }
+        if (config.tooltip != null && !config.tooltip.isEmpty()) {
+            setTooltipStyleCompat(meta, applyCustomPlaceholders(config.tooltip, customTag));
+        }
+        if (config.glow) {
+            setGlowCompat(meta);
+        }
+
+        meta.addItemFlags(ItemFlag.values());
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private String applyCustomPlaceholders(String text, CustomTag customTag) {
+        if (text == null) {
+            return "";
+        }
+
+        String displayPrefix = plugin.getCustomTagManager().getDisplayPrefix(customTag);
+        String displaySuffix = plugin.getCustomTagManager().getDisplaySuffix(customTag);
+        double refundAmount = getRefundAmount(customTag);
+        return text
+                .replace("%tag_name%", LegacyColorConverter.convertToMiniMessage(plugin.getCustomTagManager().getDisplayName()))
+                .replace("%tag_id%", customTag.getId())
+                .replace("%custom_tag_id%", customTag.getId())
+                .replace("%tag_prefix%", LegacyColorConverter.convertToMiniMessage(displayPrefix))
+                .replace("%tag_suffix%", LegacyColorConverter.convertToMiniMessage(displaySuffix))
+                .replace("%tag_full%", LegacyColorConverter.convertToMiniMessage(displayPrefix + displaySuffix))
+                .replace("%payment_provider%", customTag.getPaymentProvider())
+                .replace("%purchase_price%", formatAmount(customTag.getPurchasePrice()))
+                .replace("%refund_percent%", formatAmount(plugin.getCustomTagManager().getRefundPercent()))
+                .replace("%refund_amount%", formatAmount(refundAmount))
+                .replace("%delete_status%", plugin.getCustomTagManager().isDeleteEnabled() ? "<green>已开启" : "<red>已关闭");
+    }
+
+    private double getRefundAmount(CustomTag customTag) {
+        if (!plugin.getCustomTagManager().isRefundEnabled()) {
+            return 0.0;
+        }
+        return customTag.getPurchasePrice() * plugin.getCustomTagManager().getRefundPercent() / 100.0;
+    }
+
+    private String formatAmount(double amount) {
+        if (Math.rint(amount) == amount) {
+            return String.valueOf((long) amount);
+        }
+        return String.format(Locale.ROOT, "%.2f", amount);
+    }
+
+    private ActionMenuConfig defaultCustomTagDetailMenu() {
+        Map<Character, MenuItemConfig> menuItems = new HashMap<>();
+        menuItems.put('X', menuItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of(), List.of()));
+        menuItems.put('P', menuItem(Material.NAME_TAG, "<gold><!i>%tag_name%", List.of(
+                "<gray>ID: %tag_id%",
+                "<gray>前缀: %tag_prefix%",
+                "<gray>后缀: %tag_suffix%",
+                "<gray>退款比例: %refund_percent%%"
+        ), List.of()));
+        menuItems.put('E', menuItem(Material.EMERALD, "<green><!i>佩戴/取消佩戴", List.of("<yellow>点击切换这个自定义称号"), List.of("equip")));
+        menuItems.put('D', menuItem(Material.BARRIER, "<red><!i>删除自定义称号", List.of("<gray>只能删除自己的自定义称号", "<gray>退款金额: %refund_amount%", "<yellow>点击进入确认菜单"), List.of("delete")));
+        menuItems.put('B', menuItem(Material.ARROW, "<yellow><!i>返回称号仓库", List.of("<gray>点击返回称号仓库"), List.of("back")));
+        return new ActionMenuConfig("<gold><!i>自定义称号详情", 45,
+                List.of("XXXXXXXXX", "XXXXPXXXX", "XXEXDXBXX", "XXXXXXXXX", "XXXXXXXXX"), menuItems);
+    }
+
+    private ActionMenuConfig defaultCustomTagDeleteMenu() {
+        Map<Character, MenuItemConfig> menuItems = new HashMap<>();
+        menuItems.put('X', menuItem(Material.BLACK_STAINED_GLASS_PANE, " ", List.of(), List.of()));
+        menuItems.put('P', menuItem(Material.NAME_TAG, "<red><!i>确认删除 %tag_name%", List.of(
+                "<gray>ID: %tag_id%",
+                "<gray>删除后会从称号仓库移除",
+                "<gray>退款金额: %refund_amount%"
+        ), List.of()));
+        menuItems.put('Y', menuItem(Material.LIME_CONCRETE, "<green><!i>确认删除", List.of("<yellow>点击后立即删除"), List.of("confirm-delete")));
+        menuItems.put('N', menuItem(Material.RED_CONCRETE, "<red><!i>取消", List.of("<gray>返回自定义称号详情"), List.of("cancel-delete")));
+        return new ActionMenuConfig("<red><!i>删除自定义称号", 27,
+                List.of("XXXXXXXXX", "XXYXPXNXX", "XXXXXXXXX"), menuItems);
+    }
+
+    private MenuItemConfig menuItem(Material material, String name, List<String> lore, List<String> actions) {
+        MenuItemConfig config = new MenuItemConfig();
+        config.material = material;
+        config.name = name;
+        config.lore = lore;
+        config.actions = actions;
+        return config;
+    }
+
     private MenuItemConfig loadMenuItemConfig(ConfigurationSection section) {
         MenuItemConfig config = new MenuItemConfig();
         config.material = Material.matchMaterial(section.getString("material", "STONE"));
@@ -236,7 +422,41 @@ public class MenuManager implements Listener {
         config.tooltip = section.getString("tooltip-style", section.getString("tooltip"));
         config.glow = section.getBoolean("glow", false);
         config.actions = section.getStringList("actions");
+        if (config.actions.isEmpty() && section.isString("action")) {
+            config.actions = List.of(section.getString("action", ""));
+        }
         return config;
+    }
+
+    private ActionMenuConfig loadActionMenu(String resourcePath, ActionMenuConfig fallback) {
+        File file = new File(plugin.getDataFolder(), resourcePath);
+        if (!file.exists()) {
+            plugin.saveResource(resourcePath, false);
+        }
+
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        String title = config.getString("title", fallback.title);
+        int size = normalizeMenuSize(config.getInt("size", fallback.size));
+        List<String> layout = config.getStringList("layout");
+        if (layout.isEmpty()) {
+            layout = fallback.layout;
+        }
+
+        Map<Character, MenuItemConfig> menuItems = new HashMap<>(fallback.items);
+        ConfigurationSection itemsSection = config.getConfigurationSection("items");
+        if (itemsSection != null) {
+            for (String key : itemsSection.getKeys(false)) {
+                if (key.length() != 1) {
+                    continue;
+                }
+                ConfigurationSection itemSection = itemsSection.getConfigurationSection(key);
+                if (itemSection != null) {
+                    menuItems.put(key.charAt(0), loadMenuItemConfig(itemSection));
+                }
+            }
+        }
+
+        return new ActionMenuConfig(title, size, layout, menuItems);
     }
 
     public void openTagSelectMenu(Player player) {
@@ -255,6 +475,9 @@ public class MenuManager implements Listener {
             if (tag != null && (!tag.hasPermission() || player.hasPermission(tag.getPermission()))) {
                 availableTags.add(tagId);
             }
+        }
+        if (data != null && data.hasCustomTag() && plugin.getCustomTagManager().isEnabled()) {
+            availableTags.addAll(data.getCustomTags().keySet());
         }
 
         int totalTags = availableTags.size();
@@ -297,6 +520,19 @@ public class MenuManager implements Listener {
             if (actualIndex >= availableTags.size()) break;
 
             String tagId = availableTags.get(actualIndex);
+            if (plugin.getTagManager().isCustomTagId(tagId)) {
+                CustomTag customTag = data.getCustomTag(tagId);
+                if (customTag == null) {
+                    tagIndex++;
+                    continue;
+                }
+                boolean isSelected = tagId.equals(currentTag);
+                MenuItemConfig template = isSelected ? selectedTagItem : unselectedTagItem;
+                inventory.setItem(slot, createCustomTagItem(template, customTag, tagId, isSelected));
+                tagIndex++;
+                continue;
+            }
+
             Tag tag = plugin.getTagManager().getTag(tagId);
             if (tag == null) {
                 tagIndex++;
@@ -330,7 +566,7 @@ public class MenuManager implements Listener {
         UUID uuid = player.getUniqueId();
         reopeningMenus.add(uuid);
         try {
-            openMenus.put(uuid, new MenuSession("tag-select", page));
+            openMenus.put(uuid, new MenuSession("tag-select", page, null));
             player.openInventory(inventory);
         } finally {
             reopeningMenus.remove(uuid);
@@ -473,6 +709,55 @@ public class MenuManager implements Listener {
         return item;
     }
 
+    private ItemStack createCustomTagItem(MenuItemConfig template, CustomTag customTag, String tagId, boolean isSelected) {
+        CustomTagManager.CustomTagIcon icon = plugin.getCustomTagManager().getIcon(customTag.getIconId());
+        Material material = icon != null ? icon.material() : template.material;
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return item;
+
+        String tagName = plugin.getCustomTagManager().getDisplayName();
+        String name = template.name
+                .replace("%tag_name%", LegacyColorConverter.convertToMiniMessage(tagName))
+                .replace("%tag_id%", tagId);
+        meta.displayName(miniMessage.deserialize("<!i>" + name));
+
+        if (template.lore != null && !template.lore.isEmpty()) {
+            List<Component> lore = new ArrayList<>();
+            String displayPrefix = plugin.getCustomTagManager().getDisplayPrefix(customTag);
+            String displaySuffix = plugin.getCustomTagManager().getDisplaySuffix(customTag);
+            for (String line : template.lore) {
+                line = line.replace("%tag_name%", LegacyColorConverter.convertToMiniMessage(tagName))
+                        .replace("%tag_id%", tagId)
+                        .replace("%tag_prefix%", LegacyColorConverter.convertToMiniMessage(displayPrefix))
+                        .replace("%tag_suffix%", LegacyColorConverter.convertToMiniMessage(displaySuffix))
+                        .replace("%tag_expire%", plugin.getMessageManager().formatExpireTime(-1));
+                lore.add(miniMessage.deserialize("<!i>" + line));
+            }
+            meta.lore(lore);
+        }
+
+        if (icon != null) {
+            if (icon.customModelData() > 0) {
+                meta.setCustomModelData(icon.customModelData());
+            }
+            if (icon.itemModel() != null && !icon.itemModel().isEmpty()) {
+                setItemModelCompat(meta, icon.itemModel());
+            }
+            if (icon.tooltipStyle() != null && !icon.tooltipStyle().isEmpty()) {
+                setTooltipStyleCompat(meta, icon.tooltipStyle());
+            }
+        }
+
+        if (template.glow || isSelected) {
+            setGlowCompat(meta);
+        }
+
+        meta.addItemFlags(ItemFlag.values());
+        item.setItemMeta(meta);
+        return setTagId(item, tagId);
+    }
+
     private ItemStack setTagId(ItemStack item, String tagId) {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
@@ -507,7 +792,14 @@ public class MenuManager implements Listener {
         if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
 
         int slot = event.getRawSlot();
-        if (slot < 0 || slot >= menuSize) return;
+        if (slot < 0 || slot >= event.getInventory().getSize()) return;
+
+        if (session.menuType.equals("custom-detail") || session.menuType.equals("custom-delete")) {
+            handleCustomActionMenuClick(player, session, slot);
+            return;
+        }
+
+        if (slot >= menuSize) return;
 
         // 检查是否点击了翻页按钮
         String pageAction = getPageAction(clickedItem);
@@ -546,6 +838,15 @@ public class MenuManager implements Listener {
 
         String currentTag = data.getCurrentTag();
 
+        if (plugin.getTagManager().isCustomTagId(tagId)) {
+            if (!plugin.getTagManager().hasCustomTag(player.getUniqueId(), tagId)) {
+                plugin.getMessageManager().send(player, "custom-tag-not-purchased");
+                return;
+            }
+            openCustomTagDetailMenu(player, tagId, currentPage);
+            return;
+        }
+
         if (tagId.equals(currentTag)) {
             // 取消选择
             plugin.getTagManager().setCurrentTag(player.getUniqueId(), null);
@@ -554,7 +855,9 @@ public class MenuManager implements Listener {
             // 选择称号
             plugin.getTagManager().setCurrentTag(player.getUniqueId(), tagId);
             Tag tag = plugin.getTagManager().getTag(tagId);
-            String tagName = tag != null ? tag.getDisplayName() : tagId;
+            String tagName = plugin.getTagManager().isCustomTagId(tagId)
+                    ? plugin.getCustomTagManager().getDisplayName()
+                    : (tag != null ? tag.getDisplayName() : tagId);
             plugin.getMessageManager().send(player, "your-tag-set",
                     Map.of("tag", tagName));
         }
@@ -564,6 +867,73 @@ public class MenuManager implements Listener {
 
         // 直接刷新当前页物品，不关闭GUI
         refreshTagItems(player, currentPage);
+    }
+
+    private void handleCustomActionMenuClick(Player player, MenuSession session, int slot) {
+        ActionMenuConfig menu = session.menuType.equals("custom-delete") ? customTagDeleteMenu : customTagDetailMenu;
+        if (slot >= menu.size) {
+            return;
+        }
+
+        int row = slot / 9;
+        int col = slot % 9;
+        if (row >= menu.layout.size() || col >= menu.layout.get(row).length()) {
+            return;
+        }
+
+        char key = menu.layout.get(row).charAt(col);
+        MenuItemConfig itemConfig = menu.items.get(key);
+        if (itemConfig == null || itemConfig.actions == null || itemConfig.actions.isEmpty()) {
+            return;
+        }
+
+        for (String action : itemConfig.actions) {
+            handleCustomAction(player, session, action);
+        }
+    }
+
+    private void handleCustomAction(Player player, MenuSession session, String action) {
+        if (action == null || action.isBlank()) {
+            return;
+        }
+
+        switch (action.toLowerCase(Locale.ROOT)) {
+            case "equip" -> toggleCustomTag(player, session.customTagId, session.page);
+            case "delete" -> openCustomTagDeleteMenu(player, session.customTagId, session.page);
+            case "confirm-delete" -> plugin.getCustomTagManager().deleteOwnedCustomTag(
+                    player,
+                    session.customTagId,
+                    () -> openTagSelectMenu(player, session.page),
+                    () -> openCustomTagDetailMenu(player, session.customTagId, session.page)
+            );
+            case "cancel-delete" -> openCustomTagDetailMenu(player, session.customTagId, session.page);
+            case "back" -> openTagSelectMenu(player, session.page);
+            case "close" -> player.closeInventory();
+            default -> {
+            }
+        }
+    }
+
+    private void toggleCustomTag(Player player, String customTagId, int currentPage) {
+        if (!plugin.getTagManager().hasCustomTag(player.getUniqueId(), customTagId)) {
+            plugin.getMessageManager().send(player, "custom-tag-not-purchased");
+            openTagSelectMenu(player, currentPage);
+            return;
+        }
+
+        PlayerTagData data = plugin.getTagManager().getPlayerData(player.getUniqueId());
+        String currentTag = data != null ? data.getCurrentTag() : null;
+        if (customTagId.equals(currentTag)) {
+            plugin.getTagManager().setCurrentTag(player.getUniqueId(), null);
+            plugin.getMessageManager().send(player, "your-tag-cleared");
+        } else {
+            plugin.getTagManager().setCurrentTag(player.getUniqueId(), customTagId);
+            plugin.getMessageManager().send(player, "your-tag-set",
+                    Map.of("tag", plugin.getCustomTagManager().getDisplayName()));
+        }
+
+        player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+        openCustomTagDetailMenu(player, customTagId, currentPage);
     }
 
     private void refreshTagItems(Player player, int page) {
@@ -582,6 +952,9 @@ public class MenuManager implements Listener {
                 availableTags.add(tagId);
             }
         }
+        if (data != null && data.hasCustomTag() && plugin.getCustomTagManager().isEnabled()) {
+            availableTags.addAll(data.getCustomTags().keySet());
+        }
 
         int tagsPerPage = tagSlots.size();
         int startIndex = page * tagsPerPage;
@@ -597,6 +970,19 @@ public class MenuManager implements Listener {
             }
 
             String tagId = availableTags.get(actualIndex);
+            if (plugin.getTagManager().isCustomTagId(tagId)) {
+                CustomTag customTag = data.getCustomTag(tagId);
+                if (customTag == null) {
+                    tagIndex++;
+                    continue;
+                }
+                boolean isSelected = tagId.equals(currentTag);
+                MenuItemConfig template = isSelected ? selectedTagItem : unselectedTagItem;
+                inventory.setItem(slot, createCustomTagItem(template, customTag, tagId, isSelected));
+                tagIndex++;
+                continue;
+            }
+
             Tag tag = plugin.getTagManager().getTag(tagId);
             if (tag == null) {
                 tagIndex++;
@@ -738,10 +1124,26 @@ public class MenuManager implements Listener {
     private static class MenuSession {
         String menuType;
         int page;
+        String customTagId;
 
-        MenuSession(String menuType, int page) {
+        MenuSession(String menuType, int page, String customTagId) {
             this.menuType = menuType;
             this.page = page;
+            this.customTagId = customTagId;
+        }
+    }
+
+    private static class ActionMenuConfig {
+        String title;
+        int size;
+        List<String> layout;
+        Map<Character, MenuItemConfig> items;
+
+        ActionMenuConfig(String title, int size, List<String> layout, Map<Character, MenuItemConfig> items) {
+            this.title = title;
+            this.size = size;
+            this.layout = layout;
+            this.items = items;
         }
     }
 }

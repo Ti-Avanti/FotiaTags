@@ -1,0 +1,117 @@
+# 管理员称号列表编辑菜单
+
+# 可用变量:
+# %player% 玩家名
+# %page% 当前页
+# %total_pages% 总页数
+title: "<gold><!i>称号编辑器 <gray>(%page%/%total_pages%)"
+size: 54
+
+# 布局说明:
+# X = 边框
+# C = 创建新称号
+# 空格 = 空槽位
+# 称号物品会按 tag-slots 填充，优先覆盖布局里的物品。
+layout:
+  - "XXXXXXXXX"
+  - "X       X"
+  - "X       X"
+  - "X       X"
+  - "X       X"
+  - "XXXXCXXXX"
+
+items:
+  X:
+    material: BLACK_STAINED_GLASS_PANE
+    name: " "
+    lore: []
+
+  C:
+    material: EMERALD
+    name: "<green><!i>创建新称号"
+    lore:
+      - "<gray>点击创建一个新称号"
+    action: create_tag
+
+# 称号显示槽位
+tag-slots:
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+  - 24
+  - 25
+  - 28
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  - 34
+  - 37
+  - 38
+  - 39
+  - 40
+  - 41
+  - 42
+  - 43
+
+# 称号物品模板
+# 可用变量:
+# %tag_id% 称号ID
+# %tag_name% 显示名
+# %tag_prefix% 前缀
+# %tag_suffix% 后缀
+# %tag_prefix2% 前缀2
+# %tag_suffix2% 后缀2
+# %tag_permission% 权限
+# %tag_material% 材质
+# %tag_item_model% item-model
+# %tag_tooltip_style% tooltip-style
+# %tag_custom_model_data% custom-model-data
+# %tag_particle% 粒子效果模板ID
+tag-item:
+  material: PAPER
+  use-tag-material: true
+  name: "<white><!i>%tag_name%"
+  lore:
+    - "<gray>ID: <yellow>%tag_id%"
+    - "<gray>前缀: <white>%tag_prefix%"
+    - "<gray>后缀: <white>%tag_suffix%"
+    - "<gray>粒子: <white>%tag_particle%"
+    - ""
+    - "<yellow>点击编辑此称号"
+
+pagination:
+  prev-page-slot: 45
+  next-page-slot: 53
+
+  prev-page:
+    material: ARROW
+    name: "<yellow><!i>上一页"
+    lore:
+      - "<gray>点击返回上一页"
+
+  prev-page-disabled:
+    material: GRAY_DYE
+    name: "<gray><!i>没有上一页"
+    lore: []
+
+  next-page:
+    material: ARROW
+    name: "<yellow><!i>下一页"
+    lore:
+      - "<gray>点击前往下一页"
+
+  next-page-disabled:
+    material: GRAY_DYE
+    name: "<gray><!i>没有下一页"
+    lore: []

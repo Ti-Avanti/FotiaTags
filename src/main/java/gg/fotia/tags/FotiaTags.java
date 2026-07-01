@@ -4,9 +4,13 @@ import gg.fotia.tags.command.TagCommand;
 import gg.fotia.tags.core.ConfigManager;
 import gg.fotia.tags.core.MessageManager;
 import gg.fotia.tags.display.PlayerDisplayManager;
+import gg.fotia.tags.gui.CustomTagManager;
 import gg.fotia.tags.gui.MenuManager;
+import gg.fotia.tags.gui.PlayerTagAdminManager;
 import gg.fotia.tags.gui.TagEditorManager;
+import gg.fotia.tags.hook.PaymentManager;
 import gg.fotia.tags.hook.PlaceholderAPIHook;
+import gg.fotia.tags.particle.ParticleManager;
 import gg.fotia.tags.storage.DatabaseManager;
 import gg.fotia.tags.storage.MySQLManager;
 import gg.fotia.tags.storage.SQLiteManager;
@@ -22,8 +26,12 @@ public class FotiaTags extends JavaPlugin {
     private DatabaseManager databaseManager;
     private TagManager tagManager;
     private PlayerDisplayManager playerDisplayManager;
+    private PaymentManager paymentManager;
+    private CustomTagManager customTagManager;
+    private ParticleManager particleManager;
     private MenuManager menuManager;
     private TagEditorManager tagEditorManager;
+    private PlayerTagAdminManager playerTagAdminManager;
 
     @Override
     public void onEnable() {
@@ -41,10 +49,16 @@ public class FotiaTags extends JavaPlugin {
 
         // 初始化称号管理器
         this.tagManager = new TagManager(this);
+        this.particleManager = new ParticleManager(this);
+        this.particleManager.reload();
         this.tagManager.loadTags();
 
         // 初始化玩家显示管理器
         this.playerDisplayManager = new PlayerDisplayManager(this);
+
+        // 初始化支付与自定义称号管理器
+        this.paymentManager = new PaymentManager(this);
+        this.customTagManager = new CustomTagManager(this);
 
         // 初始化菜单管理器
         this.menuManager = new MenuManager(this);
@@ -52,6 +66,7 @@ public class FotiaTags extends JavaPlugin {
 
         // 初始化称号编辑器
         this.tagEditorManager = new TagEditorManager(this);
+        this.playerTagAdminManager = new PlayerTagAdminManager(this);
 
         // 注册命令
         TagCommand tagCommand = new TagCommand(this);
@@ -69,6 +84,10 @@ public class FotiaTags extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (particleManager != null) {
+            particleManager.shutdown();
+        }
+
         if (playerDisplayManager != null) {
             playerDisplayManager.shutdown();
         }
@@ -105,9 +124,14 @@ public class FotiaTags extends JavaPlugin {
     public void reload() {
         configManager.loadConfigs();
         messageManager.reload();
+        paymentManager.reload();
+        customTagManager.reload();
+        particleManager.reload();
         tagManager.loadTags();
         playerDisplayManager.reload();
         menuManager.loadMenus();
+        tagEditorManager.reload();
+        playerTagAdminManager.reload();
     }
 
     public static FotiaTags getInstance() {
@@ -134,11 +158,27 @@ public class FotiaTags extends JavaPlugin {
         return playerDisplayManager;
     }
 
+    public PaymentManager getPaymentManager() {
+        return paymentManager;
+    }
+
+    public CustomTagManager getCustomTagManager() {
+        return customTagManager;
+    }
+
+    public ParticleManager getParticleManager() {
+        return particleManager;
+    }
+
     public MenuManager getMenuManager() {
         return menuManager;
     }
 
     public TagEditorManager getTagEditorManager() {
         return tagEditorManager;
+    }
+
+    public PlayerTagAdminManager getPlayerTagAdminManager() {
+        return playerTagAdminManager;
     }
 }

@@ -23,6 +23,7 @@ public class ConfigManager {
         plugin.reloadConfig();
         plugin.getConfig().options().copyDefaults(true);
         plugin.saveConfig();
+        plugin.reloadConfig();
         this.config = plugin.getConfig();
 
         // 加载称号配置
@@ -40,12 +41,34 @@ public class ConfigManager {
             menusFolder.mkdirs();
         }
 
+        // 确保粒子模板文件夹存在
+        File particlesFolder = new File(plugin.getDataFolder(), "particles");
+        if (!particlesFolder.exists()) {
+            particlesFolder.mkdirs();
+        }
+
         // 保存默认语言文件
         saveDefaultResource("lang/zh_CN.yml");
         saveDefaultResource("lang/en_US.yml");
 
         // 保存默认菜单配置
         saveDefaultResource("menus/tag-select.yml");
+        saveDefaultResource("menus/custom-tag.yml");
+        saveDefaultResource("menus/custom-tag-icons.yml");
+        saveDefaultResource("menus/custom-tag-detail.yml");
+        saveDefaultResource("menus/custom-tag-delete.yml");
+        saveDefaultResource("menus/tag-editor-list.yml");
+        saveDefaultResource("menus/tag-editor-edit.yml");
+        saveDefaultResource("menus/tag-editor-delete.yml");
+        saveDefaultResource("menus/tag-editor-particles.yml");
+        saveDefaultResource("menus/player-manager-list.yml");
+        saveDefaultResource("menus/player-manager-tags.yml");
+
+        // 保存默认粒子模板
+        saveDefaultResource("particles/halo.yml");
+        saveDefaultResource("particles/trail.yml");
+        saveDefaultResource("particles/feet.yml");
+        saveDefaultResource("particles/burst.yml");
     }
 
     private FileConfiguration loadConfig(String fileName) {

@@ -18,6 +18,9 @@ import java.util.function.Supplier;
 
 public class TagManager implements Listener {
 
+    public static final String CUSTOM_TAG_ID = "__custom__";
+    public static final String CUSTOM_TAG_PREFIX = "custom:";
+
     private final FotiaTags plugin;
     private final Map<String, Tag> tags = new HashMap<>();
     private final Map<UUID, PlayerTagData> playerDataCache = new ConcurrentHashMap<>();
@@ -47,6 +50,7 @@ public class TagManager implements Listener {
                 tag.setPrefix2(tagSection.getString("prefix2", ""));
                 tag.setSuffix2(tagSection.getString("suffix2", ""));
                 tag.setPermission(tagSection.getString("permission", ""));
+                tag.setParticleEffect(tagSection.getString("particle", tagSection.getString("particle-effect", "")));
 
                 // GUI物品配置
                 String materialStr = tagSection.getString("material", "PAPER");
@@ -69,6 +73,7 @@ public class TagManager implements Listener {
             startExpireCheckTask(interval);
         }
         refreshAllPlayerDisplays();
+        refreshAllPlayerParticles();
     }
 
     private void startExpireCheckTask(int interval) {
@@ -94,6 +99,7 @@ public class TagManager implements Listener {
     }
 
     public void loadPlayer(Player player) {
+        plugin.getDatabaseManager().savePlayerProfile(player.getUniqueId(), player.getName());
         refreshPlayerData(player.getUniqueId());
     }
 
@@ -144,6 +150,7 @@ public class TagManager implements Listener {
             data.addTag(tagId, expireTime);
             trackPlayerWrite(uuid, () -> plugin.getDatabaseManager().addPlayerTag(uuid, tagId, expireTime));
             refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
             return;
         }
 
@@ -152,6 +159,7 @@ public class TagManager implements Listener {
             if (currentData != null) {
                 currentData.addTag(tagId, expireTime);
                 refreshPlayerDisplay(uuid);
+                refreshPlayerParticle(uuid);
             }
         }));
     }
@@ -162,6 +170,7 @@ public class TagManager implements Listener {
             data.removeTag(tagId);
             trackPlayerWrite(uuid, () -> plugin.getDatabaseManager().removePlayerTag(uuid, tagId));
             refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
             return;
         }
 
@@ -170,6 +179,7 @@ public class TagManager implements Listener {
             if (currentData != null) {
                 currentData.removeTag(tagId);
                 refreshPlayerDisplay(uuid);
+                refreshPlayerParticle(uuid);
             }
         }));
     }
@@ -180,6 +190,7 @@ public class TagManager implements Listener {
             data.setCurrentTag(tagId);
             trackPlayerWrite(uuid, () -> plugin.getDatabaseManager().setSelectedTag(uuid, tagId));
             refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
             return;
         }
 
@@ -188,6 +199,7 @@ public class TagManager implements Listener {
             if (currentData != null) {
                 currentData.setCurrentTag(tagId);
                 refreshPlayerDisplay(uuid);
+                refreshPlayerParticle(uuid);
             }
         }));
     }
@@ -221,6 +233,11 @@ public class TagManager implements Listener {
         PlayerTagData data = playerDataCache.get(uuid);
         if (data == null) return "";
 
+        CustomTag customTag = getSelectedCustomTag(data);
+        if (customTag != null) {
+            return getCustomTagDisplayPrefix(customTag);
+        }
+
         String currentTag = getEffectiveTagId(data);
         Tag tag = tags.get(currentTag);
         return tag != null ? tag.getPrefix() : "";
@@ -229,6 +246,11 @@ public class TagManager implements Listener {
     public String getCurrentSuffix(UUID uuid) {
         PlayerTagData data = playerDataCache.get(uuid);
         if (data == null) return "";
+
+        CustomTag customTag = getSelectedCustomTag(data);
+        if (customTag != null) {
+            return getCustomTagDisplaySuffix(customTag);
+        }
 
         String currentTag = getEffectiveTagId(data);
         Tag tag = tags.get(currentTag);
@@ -239,6 +261,11 @@ public class TagManager implements Listener {
         PlayerTagData data = playerDataCache.get(uuid);
         if (data == null) return "";
 
+        CustomTag customTag = getSelectedCustomTag(data);
+        if (customTag != null) {
+            return getCustomTagDisplayPrefix(customTag);
+        }
+
         String currentTag = getEffectiveTagId(data);
         Tag tag = tags.get(currentTag);
         return tag != null ? tag.getPrefix2() : "";
@@ -247,6 +274,11 @@ public class TagManager implements Listener {
     public String getCurrentSuffix2(UUID uuid) {
         PlayerTagData data = playerDataCache.get(uuid);
         if (data == null) return "";
+
+        CustomTag customTag = getSelectedCustomTag(data);
+        if (customTag != null) {
+            return getCustomTagDisplaySuffix(customTag);
+        }
 
         String currentTag = getEffectiveTagId(data);
         Tag tag = tags.get(currentTag);
@@ -257,12 +289,23 @@ public class TagManager implements Listener {
         PlayerTagData data = playerDataCache.get(uuid);
         if (data == null) return "";
 
+        CustomTag customTag = getSelectedCustomTag(data);
+        if (customTag != null) {
+            return customTag.getId();
+        }
+
         return getEffectiveTagId(data);
     }
 
     public String getCurrentTagName(UUID uuid) {
         PlayerTagData data = playerDataCache.get(uuid);
         if (data == null) return "";
+
+        CustomTag customTag = getSelectedCustomTag(data);
+        if (customTag != null) {
+            String display = getCustomTagDisplayPrefix(customTag) + getCustomTagDisplaySuffix(customTag);
+            return display.isBlank() ? getCustomTagDisplayName() : display;
+        }
 
         String currentTag = getEffectiveTagId(data);
         Tag tag = tags.get(currentTag);
@@ -272,6 +315,9 @@ public class TagManager implements Listener {
     private String getEffectiveTagId(PlayerTagData data) {
         String currentTag = data.getCurrentTag();
         if (currentTag != null && !currentTag.isEmpty()) {
+            if (isCustomTagId(currentTag)) {
+                return "";
+            }
             return currentTag;
         }
         if (defaultTag == null || defaultTag.isEmpty() || defaultTag.equalsIgnoreCase("disabled")) {
@@ -310,6 +356,7 @@ public class TagManager implements Listener {
 
         if (!expiredTags.isEmpty()) {
             refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
         }
     }
 
@@ -334,6 +381,109 @@ public class TagManager implements Listener {
         return defaultTag;
     }
 
+    public boolean isCustomTagId(String tagId) {
+        return tagId != null && (CUSTOM_TAG_ID.equals(tagId) || tagId.startsWith(CUSTOM_TAG_PREFIX));
+    }
+
+    public String createCustomTagId(String rawId) {
+        String normalized = rawId == null ? "" : rawId.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9_-]", "");
+        if (normalized.isEmpty()) {
+            normalized = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        }
+        return CUSTOM_TAG_PREFIX + normalized;
+    }
+
+    public boolean hasCustomTag(UUID uuid) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        return data != null && isCustomTagAvailable(data);
+    }
+
+    public boolean hasCustomTag(UUID uuid, String customTagId) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        return data != null && isCustomTagAvailable(data, customTagId);
+    }
+
+    public CustomTag getCustomTag(UUID uuid) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        return data != null ? data.getCustomTag() : null;
+    }
+
+    public CustomTag getCustomTag(UUID uuid, String customTagId) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        return data != null ? data.getCustomTag(customTagId) : null;
+    }
+
+    public Collection<CustomTag> getCustomTags(UUID uuid) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        return data != null ? data.getCustomTags().values() : Collections.emptyList();
+    }
+
+    public void updateCustomTag(UUID uuid, CustomTag customTag) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        if (data != null) {
+            data.addCustomTag(customTag);
+            refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
+        }
+    }
+
+    public void removeCustomTag(UUID uuid) {
+        removeCustomTagAsync(uuid);
+    }
+
+    public CompletableFuture<Void> setCurrentTagAsync(UUID uuid, String tagId) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        if (data != null) {
+            data.setCurrentTag(tagId);
+            refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
+        }
+
+        return plugin.getDatabaseManager().setSelectedTag(uuid, tagId);
+    }
+
+    public CompletableFuture<Void> removeTagAsync(UUID uuid, String tagId) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        if (data != null) {
+            data.removeTag(tagId);
+            refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
+        }
+
+        return plugin.getDatabaseManager().removePlayerTag(uuid, tagId);
+    }
+
+    public CompletableFuture<Void> removeCustomTagAsync(UUID uuid) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        CustomTag customTag = data != null ? data.getCustomTag() : null;
+        if (customTag != null && !customTag.getId().isBlank()) {
+            return removeCustomTagAsync(uuid, customTag.getId());
+        }
+
+        if (data != null) {
+            data.setCustomTag(null);
+            if (CUSTOM_TAG_ID.equals(data.getCurrentTag())) {
+                data.setCurrentTag(null);
+            }
+            refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
+        }
+
+        return plugin.getDatabaseManager().deleteCustomTag(uuid);
+    }
+
+    public CompletableFuture<Void> removeCustomTagAsync(UUID uuid, String customTagId) {
+        PlayerTagData data = playerDataCache.get(uuid);
+        if (data != null) {
+            data.removeCustomTag(customTagId);
+            refreshPlayerDisplay(uuid);
+            refreshPlayerParticle(uuid);
+        }
+
+        return plugin.getDatabaseManager().deleteCustomTag(uuid, customTagId);
+    }
+
     public void shutdown() {
         if (expireTask != null) {
             expireTask.cancel();
@@ -354,5 +504,70 @@ public class TagManager implements Listener {
         if (plugin.getPlayerDisplayManager() != null) {
             plugin.getPlayerDisplayManager().refreshAll();
         }
+    }
+
+    private void refreshPlayerParticle(UUID uuid) {
+        if (plugin.getParticleManager() != null) {
+            plugin.getParticleManager().refreshPlayer(uuid);
+        }
+    }
+
+    private void refreshAllPlayerParticles() {
+        if (plugin.getParticleManager() != null) {
+            plugin.getParticleManager().refreshAll();
+        }
+    }
+
+    private boolean isCustomTagSelected(PlayerTagData data) {
+        return getSelectedCustomTag(data) != null;
+    }
+
+    private CustomTag getSelectedCustomTag(PlayerTagData data) {
+        if (data == null || plugin.getCustomTagManager() == null || !plugin.getCustomTagManager().isEnabled()) {
+            return null;
+        }
+
+        String currentTag = data.getCurrentTag();
+        if (CUSTOM_TAG_ID.equals(currentTag)) {
+            return data.getCustomTag();
+        }
+        if (!isCustomTagId(currentTag)) {
+            return null;
+        }
+        CustomTag customTag = data.getCustomTag(currentTag);
+        return customTag != null && customTag.isComplete() ? customTag : null;
+    }
+
+    private boolean isCustomTagAvailable(PlayerTagData data) {
+        return data.hasCustomTag()
+                && plugin.getCustomTagManager() != null
+                && plugin.getCustomTagManager().isEnabled();
+    }
+
+    private boolean isCustomTagAvailable(PlayerTagData data, String customTagId) {
+        return data.hasCustomTag(customTagId)
+                && plugin.getCustomTagManager() != null
+                && plugin.getCustomTagManager().isEnabled();
+    }
+
+    private String getCustomTagDisplayName() {
+        if (plugin.getCustomTagManager() == null) {
+            return "自定义称号";
+        }
+        return plugin.getCustomTagManager().getDisplayName();
+    }
+
+    private String getCustomTagDisplayPrefix(CustomTag customTag) {
+        if (plugin.getCustomTagManager() == null) {
+            return customTag.getPrefix();
+        }
+        return plugin.getCustomTagManager().getDisplayPrefix(customTag);
+    }
+
+    private String getCustomTagDisplaySuffix(CustomTag customTag) {
+        if (plugin.getCustomTagManager() == null) {
+            return customTag.getSuffix();
+        }
+        return plugin.getCustomTagManager().getDisplaySuffix(customTag);
     }
 }

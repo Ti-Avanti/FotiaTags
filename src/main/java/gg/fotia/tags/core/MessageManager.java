@@ -1,6 +1,7 @@
 package gg.fotia.tags.core;
 
 import gg.fotia.tags.FotiaTags;
+import gg.fotia.tags.util.LegacyColorConverter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -8,6 +9,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +22,8 @@ public class MessageManager {
     private final FotiaTags plugin;
     private final MiniMessage miniMessage;
     private FileConfiguration langConfig;
+    private FileConfiguration bundledLangConfig;
+    private FileConfiguration bundledZhConfig;
     private String currentLang;
 
     public MessageManager(FotiaTags plugin) {
@@ -33,14 +39,27 @@ public class MessageManager {
             langFile = new File(plugin.getDataFolder(), "lang/zh_CN.yml");
         }
         this.langConfig = YamlConfiguration.loadConfiguration(langFile);
+        this.bundledLangConfig = loadBundledLanguage(currentLang);
+        this.bundledZhConfig = currentLang.equalsIgnoreCase("zh_CN") ? bundledLangConfig : loadBundledLanguage("zh_CN");
     }
 
     public String getRaw(String key) {
-        return langConfig.getString(key, key);
+        return getRaw(key, key);
     }
 
     public String getRaw(String key, String defaultValue) {
-        return langConfig.getString(key, defaultValue);
+        String message = langConfig.getString(key);
+        if (message != null) {
+            return message;
+        }
+
+        message = bundledLangConfig.getString(key);
+        if (message != null) {
+            return message;
+        }
+
+        message = bundledZhConfig.getString(key);
+        return message != null ? message : defaultValue;
     }
 
     public String getRaw(String key, Map<String, String> placeholders) {
@@ -60,7 +79,7 @@ public class MessageManager {
     }
 
     public Component parse(String text) {
-        return miniMessage.deserialize("<!i>" + text);
+        return miniMessage.deserialize("<!i>" + LegacyColorConverter.convertToMiniMessage(text));
     }
 
     public void send(Player player, String key) {
@@ -132,6 +151,18 @@ public class MessageManager {
     private String getDurationText(String key, String zhFallback, String enFallback) {
         String fallback = currentLang != null && currentLang.toLowerCase().startsWith("zh") ? zhFallback : enFallback;
         return getRaw(key, fallback);
+    }
+
+    private FileConfiguration loadBundledLanguage(String language) {
+        String resourcePath = "lang/" + language + ".yml";
+        try (InputStream stream = plugin.getResource(resourcePath)) {
+            if (stream == null) {
+                return new YamlConfiguration();
+            }
+            return YamlConfiguration.loadConfiguration(new InputStreamReader(stream, StandardCharsets.UTF_8));
+        } catch (Exception ignored) {
+            return new YamlConfiguration();
+        }
     }
 
     public static Map<String, String> of(String... args) {

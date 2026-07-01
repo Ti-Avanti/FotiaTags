@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'gg.fotia'
-version = '1.0.4'
+version = '1.0.9'
 
 java {
     toolchain {
@@ -16,15 +16,28 @@ repositories {
     mavenCentral()
     maven { url = 'https://repo.papermc.io/repository/maven-public/' }
     maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+    maven { url = 'https://jitpack.io' }
+    maven { url = 'https://repo.rosewooddev.io/repository/public/' }
 }
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
     compileOnly 'me.clip:placeholderapi:2.11.6'
+    compileOnly('com.github.MilkBowl:VaultAPI:1.7') {
+        exclude group: 'org.bukkit'
+        exclude group: 'org.spigotmc'
+    }
+    compileOnly('org.black_ixx:playerpoints:3.2.7') {
+        exclude group: 'org.bukkit'
+        exclude group: 'org.spigotmc'
+    }
 
     implementation 'com.zaxxer:HikariCP:5.1.0'
     implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
     implementation 'com.mysql:mysql-connector-j:8.4.0'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 processResources {
@@ -39,6 +52,20 @@ shadowJar {
     archiveClassifier.set('')
     relocate 'com.zaxxer.hikari', 'gg.fotia.tags.libs.hikari'
     mergeServiceFiles()
+
+    exclude 'org/sqlite/native/Linux-Android/**'
+    exclude 'org/sqlite/native/Linux-Musl/**'
+    exclude 'org/sqlite/native/FreeBSD/**'
+    exclude 'org/sqlite/native/Mac/**'
+    exclude 'org/sqlite/native/Linux/aarch64/**'
+    exclude 'org/sqlite/native/Linux/arm/**'
+    exclude 'org/sqlite/native/Linux/armv6/**'
+    exclude 'org/sqlite/native/Linux/armv7/**'
+    exclude 'org/sqlite/native/Linux/x86/**'
+    exclude 'org/sqlite/native/Linux/ppc64/**'
+    exclude 'org/sqlite/native/Windows/aarch64/**'
+    exclude 'org/sqlite/native/Windows/armv7/**'
+    exclude 'org/sqlite/native/Windows/x86/**'
 }
 
 tasks.named('build') {
@@ -47,4 +74,8 @@ tasks.named('build') {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }

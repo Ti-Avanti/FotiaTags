@@ -11,6 +11,7 @@ public class Tag {
     private String prefix2;
     private String suffix2;
     private String permission;
+    private String particleEffect;
 
     // GUI物品配置
     private Material material;
@@ -78,6 +79,14 @@ public class Tag {
 
     public boolean hasPermission() {
         return permission != null && !permission.isEmpty();
+    }
+
+    public String getParticleEffect() {
+        return particleEffect != null ? particleEffect : "";
+    }
+
+    public void setParticleEffect(String particleEffect) {
+        this.particleEffect = particleEffect;
     }
 
     public Material getMaterial() {

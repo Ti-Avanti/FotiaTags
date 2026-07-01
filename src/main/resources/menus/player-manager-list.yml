@@ -1,0 +1,84 @@
+# 玩家称号管理一级菜单
+title: "<gold><!i>玩家称号管理 <gray>(%page%/%total_pages%)"
+size: 54
+
+# 可用占位符:
+# %admin% = 打开菜单的管理员
+# %page% = 当前页
+# %total_pages% = 总页数
+layout:
+  - "XXXXXXXXX"
+  - "X       X"
+  - "X       X"
+  - "X       X"
+  - "X       X"
+  - "PXXXCXXXN"
+
+player-slots:
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+  - 24
+  - 25
+  - 28
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  - 34
+  - 37
+  - 38
+  - 39
+  - 40
+  - 41
+  - 42
+  - 43
+
+player-item:
+  material: PLAYER_HEAD
+  use-player-head: true
+  name: "<yellow><!i>%player%"
+  lore:
+    - "<gray>UUID: %uuid%"
+    - "<gray>当前称号: %current_tag%"
+    - "<gray>普通称号: %tag_count%"
+    - "<gray>自定义称号: %custom_tag%"
+    - ""
+    - "<yellow>点击管理该玩家"
+
+items:
+  X:
+    material: BLACK_STAINED_GLASS_PANE
+    name: " "
+    lore: []
+
+  P:
+    material: ARROW
+    name: "<yellow><!i>上一页"
+    lore:
+      - "<gray>当前: %page%/%total_pages%"
+    action: prev-page
+
+  N:
+    material: ARROW
+    name: "<yellow><!i>下一页"
+    lore:
+      - "<gray>当前: %page%/%total_pages%"
+    action: next-page
+
+  C:
+    material: BARRIER
+    name: "<red><!i>关闭"
+    lore:
+      - "<gray>点击关闭菜单"
+    action: close

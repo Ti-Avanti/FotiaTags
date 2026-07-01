@@ -6,11 +6,14 @@ public class PlayerTagData {
 
     private final UUID uuid;
     private String currentTag;
+    private CustomTag customTag;
+    private final Map<String, CustomTag> customTags;
     private final Map<String, Long> ownedTags; // tagId -> expireTime (-1 = permanent)
 
     public PlayerTagData(UUID uuid) {
         this.uuid = uuid;
         this.currentTag = null;
+        this.customTags = new LinkedHashMap<>();
         this.ownedTags = new HashMap<>();
     }
 
@@ -24,6 +27,66 @@ public class PlayerTagData {
 
     public void setCurrentTag(String currentTag) {
         this.currentTag = currentTag;
+    }
+
+    public CustomTag getCustomTag() {
+        if (customTag != null) {
+            return customTag;
+        }
+        return customTags.values().stream().findFirst().orElse(null);
+    }
+
+    public void setCustomTag(CustomTag customTag) {
+        this.customTag = customTag;
+        customTags.clear();
+        if (customTag != null && !customTag.getId().isEmpty()) {
+            customTags.put(customTag.getId(), customTag);
+        }
+    }
+
+    public boolean hasCustomTag() {
+        return customTags.values().stream().anyMatch(CustomTag::isComplete)
+                || (customTag != null && customTag.isComplete());
+    }
+
+    public boolean hasCustomTag(String customTagId) {
+        CustomTag custom = getCustomTag(customTagId);
+        return custom != null && custom.isComplete();
+    }
+
+    public CustomTag getCustomTag(String customTagId) {
+        if (customTagId == null || customTagId.isEmpty()) {
+            return null;
+        }
+        if (customTagId.equals(TagManager.CUSTOM_TAG_ID)) {
+            return getCustomTag();
+        }
+        return customTags.get(customTagId);
+    }
+
+    public Map<String, CustomTag> getCustomTags() {
+        return Collections.unmodifiableMap(customTags);
+    }
+
+    public void addCustomTag(CustomTag customTag) {
+        if (customTag == null || customTag.getId().isEmpty()) {
+            return;
+        }
+        customTags.put(customTag.getId(), customTag);
+        if (this.customTag == null) {
+            this.customTag = customTag;
+        }
+    }
+
+    public CustomTag removeCustomTag(String customTagId) {
+        CustomTag removed = customTags.remove(customTagId);
+        if (customTagId != null && customTagId.equals(currentTag)) {
+            currentTag = null;
+        }
+        if (removed != null && removed == customTag) {
+            customTag = customTags.values().stream().findFirst().orElse(null);
+        }
+        return removed;
     }
 
     public Map<String, Long> getOwnedTags() {

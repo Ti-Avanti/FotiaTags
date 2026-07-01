@@ -1,0 +1,38 @@
+# 管理员删除称号确认菜单
+
+# 可用变量:
+# %tag_id% 称号ID
+# %tag_name% 显示名
+title: "<red><!i>确认删除: %tag_name%"
+size: 27
+
+# 布局说明:
+# X = 边框
+# Y = 确认删除
+# N = 取消
+layout:
+  - "XXXXXXXXX"
+  - "XXYXXXNXX"
+  - "XXXXXXXXX"
+
+items:
+  X:
+    material: BLACK_STAINED_GLASS_PANE
+    name: " "
+    lore: []
+
+  Y:
+    material: RED_CONCRETE
+    name: "<red><!i>确认删除"
+    lore:
+      - "<gray>点击确认删除此称号"
+      - ""
+      - "<red>此操作不可撤销！"
+    action: confirm_delete
+
+  N:
+    material: LIME_CONCRETE
+    name: "<green><!i>取消"
+    lore:
+      - "<gray>点击返回编辑界面"
+    action: cancel_delete

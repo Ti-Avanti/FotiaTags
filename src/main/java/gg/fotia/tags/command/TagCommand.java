@@ -53,10 +53,12 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             case "set" -> handleSet(sender, args);
             case "list" -> handleList(sender, args);
             case "menu" -> handleMenu(sender);
+            case "custom" -> handleCustom(sender);
             case "reload" -> handleReload(sender);
             case "export" -> handleExport(sender);
             case "import" -> handleImport(sender, args);
             case "editor" -> handleEditor(sender);
+            case "players" -> handlePlayers(sender);
             case "help" -> sendHelp(sender);
             default -> sendHelp(sender);
         }
@@ -116,6 +118,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             }
             return;
         }
+        plugin.getDatabaseManager().savePlayerProfile(target.getUniqueId(), target.getName() != null ? target.getName() : playerName);
 
         // 给予称号
         plugin.getTagManager().giveTag(target.getUniqueId(), tagId, duration);
@@ -163,6 +166,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             }
             return;
         }
+        plugin.getDatabaseManager().savePlayerProfile(target.getUniqueId(), target.getName() != null ? target.getName() : playerName);
 
         Tag tag = plugin.getTagManager().getTag(tagId);
         String tagName = tag != null ? tag.getDisplayName() : tagId;
@@ -313,6 +317,20 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         plugin.getMenuManager().openTagSelectMenu(player);
     }
 
+    private void handleCustom(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("This command can only be used by players!");
+            return;
+        }
+
+        if (!player.hasPermission("fotiatags.custom")) {
+            plugin.getMessageManager().send(player, "no-permission");
+            return;
+        }
+
+        plugin.getCustomTagManager().openCustomMenu(player);
+    }
+
     private void handleReload(CommandSender sender) {
         if (!sender.hasPermission("fotiatags.admin.reload")) {
             if (sender instanceof Player p) {
@@ -342,6 +360,20 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         }
 
         plugin.getTagEditorManager().openTagListEditor(player, 0);
+    }
+
+    private void handlePlayers(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("This command can only be used by players!");
+            return;
+        }
+
+        if (!player.hasPermission("fotiatags.admin.players")) {
+            plugin.getMessageManager().send(player, "no-permission");
+            return;
+        }
+
+        plugin.getPlayerTagAdminManager().openPlayerList(player);
     }
 
     private void handleExport(CommandSender sender) {
@@ -530,11 +562,17 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             }
             plugin.getMessageManager().send(p, "help-list");
             plugin.getMessageManager().send(p, "help-menu");
+            if (p.hasPermission("fotiatags.custom")) {
+                plugin.getMessageManager().send(p, "help-custom");
+            }
             if (p.hasPermission("fotiatags.admin.reload")) {
                 plugin.getMessageManager().send(p, "help-reload");
             }
             if (p.hasPermission("fotiatags.admin.editor")) {
                 plugin.getMessageManager().send(p, "help-editor");
+            }
+            if (p.hasPermission("fotiatags.admin.players")) {
+                plugin.getMessageManager().send(p, "help-players");
             }
             if (p.hasPermission("fotiatags.admin.export")) {
                 plugin.getMessageManager().send(p, "help-export");
@@ -553,11 +591,13 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             List<String> subCommands = new ArrayList<>();
             subCommands.add("menu");
             subCommands.add("list");
+            if (sender.hasPermission("fotiatags.custom")) subCommands.add("custom");
             if (sender.hasPermission("fotiatags.admin.give")) subCommands.add("give");
             if (sender.hasPermission("fotiatags.admin.remove")) subCommands.add("remove");
             if (sender.hasPermission("fotiatags.admin.set")) subCommands.add("set");
             if (sender.hasPermission("fotiatags.admin.reload")) subCommands.add("reload");
             if (sender.hasPermission("fotiatags.admin.editor")) subCommands.add("editor");
+            if (sender.hasPermission("fotiatags.admin.players")) subCommands.add("players");
             if (sender.hasPermission("fotiatags.admin.export")) subCommands.add("export");
             if (sender.hasPermission("fotiatags.admin.import")) subCommands.add("import");
             subCommands.add("help");

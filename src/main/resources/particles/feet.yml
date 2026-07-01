@@ -1,0 +1,20 @@
+# 脚下环绕粒子模板
+
+display-name: "<green><!i>脚下环绕"
+enabled: true
+
+type: CRIT
+style: feet
+
+interval-ticks: 6
+amount: 8
+radius: 0.7
+y-offset: 0.1
+speed: 0.0
+
+gui:
+  material: GRASS_BLOCK
+  custom-model-data: 0
+  item-model: ""
+  tooltip-style: ""
+  glow: false

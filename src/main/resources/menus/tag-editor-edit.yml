@@ -1,0 +1,194 @@
+# 管理员单个称号编辑菜单
+
+# 可用变量:
+# %tag_id% 称号ID
+# %tag_name% 显示名
+# %tag_prefix% 前缀
+# %tag_suffix% 后缀
+# %tag_prefix2% 前缀2
+# %tag_suffix2% 后缀2
+# %tag_permission% 权限
+# %tag_material% 材质
+# %tag_item_model% item-model
+# %tag_tooltip_style% tooltip-style
+# %tag_custom_model_data% custom-model-data
+# %tag_particle% 粒子效果模板ID
+# %current_value% 当前编辑项的值
+title: "<gold><!i>编辑称号: %tag_name%"
+size: 54
+
+# 编辑项当前值为空时显示的文本
+empty-value: "<gray>(空)"
+
+# 布局说明:
+# X = 边框
+# N = 称号ID
+# D = 显示名称
+# P = 前缀
+# S = 后缀
+# A = 前缀2
+# B = 后缀2
+# R = 权限
+# M = GUI物品材质
+# I = item-model
+# O = custom-model-data
+# T = tooltip-style
+# G = 粒子效果
+# L = 返回列表
+# V = 保存
+# E = 删除
+layout:
+  - "XXXXNXXXX"
+  - "XXXXXXXXX"
+  - "XDPSABRMX"
+  - "XXIOTGXXX"
+  - "XXXXXXXXX"
+  - "LXXXVXXXE"
+
+items:
+  X:
+    material: BLACK_STAINED_GLASS_PANE
+    name: " "
+    lore: []
+
+  N:
+    material: NAME_TAG
+    name: "<white><!i>称号ID"
+    lore:
+      - "<yellow>%tag_id%"
+      - ""
+      - "<gray>称号ID不可修改"
+
+  D:
+    material: OAK_SIGN
+    name: "<white><!i>显示名称"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: display_name
+
+  P:
+    material: PAPER
+    name: "<white><!i>前缀 (MiniMessage)"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: prefix
+
+  S:
+    material: PAPER
+    name: "<white><!i>后缀 (MiniMessage)"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: suffix
+
+  A:
+    material: MAP
+    name: "<white><!i>前缀2 (PAPI)"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: prefix2
+
+  B:
+    material: MAP
+    name: "<white><!i>后缀2 (PAPI)"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: suffix2
+
+  R:
+    material: IRON_BARS
+    name: "<white><!i>权限节点"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: permission
+
+  M:
+    material: PAPER
+    use-tag-material: true
+    name: "<white><!i>GUI物品材质"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: material
+
+  I:
+    material: ITEM_FRAME
+    name: "<white><!i>物品模型 (item-model)"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: item_model
+
+  O:
+    material: COMMAND_BLOCK
+    name: "<white><!i>自定义模型数据"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: custom_model_data
+
+  T:
+    material: PAINTING
+    name: "<white><!i>提示样式 (tooltip-style)"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%current_value%"
+      - ""
+      - "<yellow>点击修改"
+    edit-field: tooltip_style
+
+  G:
+    material: BLAZE_POWDER
+    name: "<white><!i>粒子效果"
+    lore:
+      - "<gray>当前值:"
+      - "<white>%tag_particle%"
+      - ""
+      - "<yellow>点击选择粒子模板"
+    action: select_particle_menu
+
+  L:
+    material: ARROW
+    name: "<yellow><!i>返回列表"
+    lore:
+      - "<gray>点击返回称号列表"
+    action: back_to_list
+
+  V:
+    material: LIME_CONCRETE
+    name: "<green><!i>保存更改"
+    lore:
+      - "<gray>点击保存所有更改"
+    action: save_tag
+
+  E:
+    material: RED_CONCRETE
+    name: "<red><!i>删除称号"
+    lore:
+      - "<gray>点击删除此称号"
+      - ""
+      - "<red>此操作不可撤销！"
+    action: delete_tag
