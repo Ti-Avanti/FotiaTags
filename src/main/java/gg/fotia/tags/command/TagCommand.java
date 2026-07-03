@@ -2,6 +2,7 @@ package gg.fotia.tags.command;
 
 import gg.fotia.tags.FotiaTags;
 import gg.fotia.tags.core.MessageManager;
+import gg.fotia.tags.storage.PlayerProfile;
 import gg.fotia.tags.tag.PlayerTagData;
 import gg.fotia.tags.tag.Tag;
 import gg.fotia.tags.util.TimeUtil;
@@ -58,6 +59,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             case "export" -> handleExport(sender);
             case "import" -> handleImport(sender, args);
             case "editor" -> handleEditor(sender);
+            case "player" -> handlePlayer(sender, args);
             case "players" -> handlePlayers(sender);
             case "help" -> sendHelp(sender);
             default -> sendHelp(sender);
@@ -376,6 +378,88 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         plugin.getPlayerTagAdminManager().openPlayerList(player);
     }
 
+    private void handlePlayer(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player admin)) {
+            sender.sendMessage("This command can only be used by players!");
+            return;
+        }
+
+        if (!admin.hasPermission("fotiatags.admin.players")) {
+            plugin.getMessageManager().send(admin, "no-permission");
+            return;
+        }
+
+        if (args.length < 2) {
+            plugin.getMessageManager().send(admin, "help-player");
+            return;
+        }
+
+        String input = args[1];
+        Player onlineTarget = Bukkit.getPlayerExact(input);
+        if (onlineTarget != null) {
+            openPlayerAdminMenu(admin, onlineTarget.getUniqueId(), onlineTarget.getName());
+            return;
+        }
+
+        UUID uuid = parseUuid(input);
+        if (uuid != null) {
+            OfflinePlayer target = Bukkit.getOfflinePlayer(uuid);
+            if (target.hasPlayedBefore() || target.getName() != null) {
+                openPlayerAdminMenu(admin, uuid, target.getName() != null ? target.getName() : input);
+                return;
+            }
+        } else {
+            OfflinePlayer target = Bukkit.getOfflinePlayer(input);
+            if (target.hasPlayedBefore()) {
+                openPlayerAdminMenu(admin, target.getUniqueId(), target.getName() != null ? target.getName() : input);
+                return;
+            }
+        }
+
+        plugin.getDatabaseManager().loadPlayerProfiles()
+                .whenComplete((profiles, throwable) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (throwable != null) {
+                        plugin.getMessageManager().send(admin, "admin-player-list-load-failed");
+                        return;
+                    }
+
+                    PlayerProfile profile = findProfile(profiles, input, uuid);
+                    if (profile == null) {
+                        plugin.getMessageManager().send(admin, "player-not-found",
+                                MessageManager.of("player", input));
+                        return;
+                    }
+
+                    openPlayerAdminMenu(admin, profile.uuid(), profile.displayName());
+                }));
+    }
+
+    private void openPlayerAdminMenu(Player admin, UUID targetUuid, String targetName) {
+        plugin.getDatabaseManager().savePlayerProfile(targetUuid, targetName);
+        plugin.getPlayerTagAdminManager().openPlayerTags(admin, targetUuid, targetName);
+    }
+
+    private UUID parseUuid(String input) {
+        try {
+            return UUID.fromString(input);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private PlayerProfile findProfile(List<PlayerProfile> profiles, String input, UUID uuid) {
+        String normalizedInput = input.toLowerCase(Locale.ROOT);
+        for (PlayerProfile profile : profiles) {
+            if (uuid != null && profile.uuid().equals(uuid)) {
+                return profile;
+            }
+            if (profile.displayName().toLowerCase(Locale.ROOT).equals(normalizedInput)) {
+                return profile;
+            }
+        }
+        return null;
+    }
+
     private void handleExport(CommandSender sender) {
         if (!sender.hasPermission("fotiatags.admin.export")) {
             if (sender instanceof Player p) {
@@ -573,6 +657,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             }
             if (p.hasPermission("fotiatags.admin.players")) {
                 plugin.getMessageManager().send(p, "help-players");
+                plugin.getMessageManager().send(p, "help-player");
             }
             if (p.hasPermission("fotiatags.admin.export")) {
                 plugin.getMessageManager().send(p, "help-export");
@@ -597,7 +682,10 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             if (sender.hasPermission("fotiatags.admin.set")) subCommands.add("set");
             if (sender.hasPermission("fotiatags.admin.reload")) subCommands.add("reload");
             if (sender.hasPermission("fotiatags.admin.editor")) subCommands.add("editor");
-            if (sender.hasPermission("fotiatags.admin.players")) subCommands.add("players");
+            if (sender.hasPermission("fotiatags.admin.players")) {
+                subCommands.add("players");
+                subCommands.add("player");
+            }
             if (sender.hasPermission("fotiatags.admin.export")) subCommands.add("export");
             if (sender.hasPermission("fotiatags.admin.import")) subCommands.add("import");
             subCommands.add("help");
@@ -609,7 +697,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 2) {
             String subCommand = args[0].toLowerCase();
-            if (subCommand.equals("give") || subCommand.equals("remove") || subCommand.equals("set") || subCommand.equals("list")) {
+            if (subCommand.equals("give") || subCommand.equals("remove") || subCommand.equals("set") || subCommand.equals("list") || subCommand.equals("player")) {
                 return Bukkit.getOnlinePlayers().stream()
                         .map(Player::getName)
                         .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
