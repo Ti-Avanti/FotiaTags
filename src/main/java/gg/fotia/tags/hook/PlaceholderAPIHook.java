@@ -52,9 +52,9 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
             default -> null;
         };
 
-        // 转换旧版颜色代码为MiniMessage格式
+        // PlaceholderAPI消费者通常按旧版颜色码解析，避免向CMI等插件返回原始MiniMessage标签。
         if (result != null) {
-            result = LegacyColorConverter.convertToMiniMessage(result);
+            result = LegacyColorConverter.convertToLegacy(result);
         }
 
         return result;

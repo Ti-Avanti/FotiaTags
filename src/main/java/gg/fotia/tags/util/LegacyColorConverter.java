@@ -1,5 +1,9 @@
 package gg.fotia.tags.util;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -10,6 +14,13 @@ import java.util.regex.Pattern;
  * 将 & 和 § 颜色代码转换为 MiniMessage 格式。
  */
 public class LegacyColorConverter {
+
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.builder()
+            .character('\u00a7')
+            .hexColors()
+            .useUnusualXRepeatedCharacterHexFormat()
+            .build();
 
     private static final Map<Character, String> COLOR_MAP = new HashMap<>();
     private static final Map<Character, String> FORMAT_MAP = new HashMap<>();
@@ -52,6 +63,15 @@ public class LegacyColorConverter {
         text = convertHexColors(text);
         text = convertBukkitHexColors(text);
         return convertBasicColors(text);
+    }
+
+    public static String convertToLegacy(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+
+        Component component = MINI_MESSAGE.deserialize("<!i>" + convertToMiniMessage(text));
+        return LEGACY_SERIALIZER.serialize(component);
     }
 
     private static String convertHexColors(String text) {

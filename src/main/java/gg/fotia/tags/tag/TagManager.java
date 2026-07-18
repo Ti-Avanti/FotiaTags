@@ -1,6 +1,7 @@
 package gg.fotia.tags.tag;
 
 import gg.fotia.tags.FotiaTags;
+import gg.fotia.tags.util.AsyncCommit;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -14,6 +15,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 
 public class TagManager implements Listener {
@@ -25,9 +27,12 @@ public class TagManager implements Listener {
     private final Map<String, Tag> tags = new HashMap<>();
     private final Map<UUID, PlayerTagData> playerDataCache = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> pendingWriteCounts = new ConcurrentHashMap<>();
+    private final Set<UUID> failedPlayerWrites = ConcurrentHashMap.newKeySet();
     private String defaultTag;
     private BukkitTask expireTask;
     private int expireTaskInterval = -1;
+    private BukkitTask syncTask;
+    private int syncTaskInterval = -1;
 
     public TagManager(FotiaTags plugin) {
         this.plugin = plugin;
@@ -72,6 +77,17 @@ public class TagManager implements Listener {
         if (expireTask == null || expireTask.isCancelled() || expireTaskInterval != interval) {
             startExpireCheckTask(interval);
         }
+
+        String databaseType = plugin.getConfigManager().getConfig().getString("database.type", "sqlite");
+        int syncInterval = Math.max(0,
+                plugin.getConfigManager().getConfig().getInt("settings.cross-server-sync-interval", 60));
+        if ("mysql".equalsIgnoreCase(databaseType) && syncInterval > 0) {
+            if (syncTask == null || syncTask.isCancelled() || syncTaskInterval != syncInterval) {
+                startSyncTask(syncInterval);
+            }
+        } else {
+            stopSyncTask();
+        }
         refreshAllPlayerDisplays();
         refreshAllPlayerParticles();
     }
@@ -83,9 +99,27 @@ public class TagManager implements Listener {
         expireTaskInterval = interval;
         expireTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
+                checkExpiredTags(player.getUniqueId());
+            }
+        }, interval * 20L, interval * 20L);
+    }
+
+    private void startSyncTask(int interval) {
+        stopSyncTask();
+        syncTaskInterval = interval;
+        syncTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
                 refreshPlayerData(player.getUniqueId());
             }
         }, interval * 20L, interval * 20L);
+    }
+
+    private void stopSyncTask() {
+        if (syncTask != null) {
+            syncTask.cancel();
+            syncTask = null;
+        }
+        syncTaskInterval = -1;
     }
 
     @EventHandler
@@ -210,23 +244,41 @@ public class TagManager implements Listener {
         }
     }
 
+    private void executeSync(Runnable task) {
+        if (!plugin.isEnabled()) {
+            throw new RejectedExecutionException("FotiaTags is disabled");
+        }
+        if (Bukkit.isPrimaryThread()) {
+            task.run();
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin, task);
+    }
+
     private void trackPlayerWrite(UUID uuid, Supplier<CompletableFuture<Void>> writeSupplier) {
         pendingWriteCounts.merge(uuid, 1, Integer::sum);
         try {
-            writeSupplier.get().whenComplete((ignored, throwable) -> completePlayerWrite(uuid));
+            writeSupplier.get().whenComplete((ignored, throwable) -> completePlayerWrite(uuid, throwable));
         } catch (RuntimeException e) {
-            completePlayerWrite(uuid);
+            completePlayerWrite(uuid, e);
             throw e;
         }
     }
 
-    private void completePlayerWrite(UUID uuid) {
+    private void completePlayerWrite(UUID uuid, Throwable throwable) {
+        if (throwable != null) {
+            failedPlayerWrites.add(uuid);
+            plugin.getLogger().severe("Failed to persist player tag data for " + uuid + ": " + throwable.getMessage());
+        }
         pendingWriteCounts.compute(uuid, (key, count) -> {
             if (count == null || count <= 1) {
                 return null;
             }
             return count - 1;
         });
+        if (!pendingWriteCounts.containsKey(uuid) && failedPlayerWrites.remove(uuid)) {
+            refreshPlayerData(uuid);
+        }
     }
 
     public String getCurrentPrefix(UUID uuid) {
@@ -433,25 +485,25 @@ public class TagManager implements Listener {
     }
 
     public CompletableFuture<Void> setCurrentTagAsync(UUID uuid, String tagId) {
-        PlayerTagData data = playerDataCache.get(uuid);
-        if (data != null) {
-            data.setCurrentTag(tagId);
-            refreshPlayerDisplay(uuid);
-            refreshPlayerParticle(uuid);
-        }
-
-        return plugin.getDatabaseManager().setSelectedTag(uuid, tagId);
+        return AsyncCommit.after(plugin.getDatabaseManager().setSelectedTag(uuid, tagId), this::executeSync, () -> {
+            PlayerTagData data = playerDataCache.get(uuid);
+            if (data != null) {
+                data.setCurrentTag(tagId);
+                refreshPlayerDisplay(uuid);
+                refreshPlayerParticle(uuid);
+            }
+        });
     }
 
     public CompletableFuture<Void> removeTagAsync(UUID uuid, String tagId) {
-        PlayerTagData data = playerDataCache.get(uuid);
-        if (data != null) {
-            data.removeTag(tagId);
-            refreshPlayerDisplay(uuid);
-            refreshPlayerParticle(uuid);
-        }
-
-        return plugin.getDatabaseManager().removePlayerTag(uuid, tagId);
+        return AsyncCommit.after(plugin.getDatabaseManager().removePlayerTag(uuid, tagId), this::executeSync, () -> {
+            PlayerTagData data = playerDataCache.get(uuid);
+            if (data != null) {
+                data.removeTag(tagId);
+                refreshPlayerDisplay(uuid);
+                refreshPlayerParticle(uuid);
+            }
+        });
     }
 
     public CompletableFuture<Void> removeCustomTagAsync(UUID uuid) {
@@ -461,27 +513,29 @@ public class TagManager implements Listener {
             return removeCustomTagAsync(uuid, customTag.getId());
         }
 
-        if (data != null) {
-            data.setCustomTag(null);
-            if (CUSTOM_TAG_ID.equals(data.getCurrentTag())) {
-                data.setCurrentTag(null);
+        return AsyncCommit.after(plugin.getDatabaseManager().deleteCustomTag(uuid), this::executeSync, () -> {
+            PlayerTagData currentData = playerDataCache.get(uuid);
+            if (currentData != null) {
+                currentData.setCustomTag(null);
+                if (CUSTOM_TAG_ID.equals(currentData.getCurrentTag())
+                        || (currentData.getCurrentTag() != null && currentData.getCurrentTag().startsWith(CUSTOM_TAG_PREFIX))) {
+                    currentData.setCurrentTag(null);
+                }
+                refreshPlayerDisplay(uuid);
+                refreshPlayerParticle(uuid);
             }
-            refreshPlayerDisplay(uuid);
-            refreshPlayerParticle(uuid);
-        }
-
-        return plugin.getDatabaseManager().deleteCustomTag(uuid);
+        });
     }
 
     public CompletableFuture<Void> removeCustomTagAsync(UUID uuid, String customTagId) {
-        PlayerTagData data = playerDataCache.get(uuid);
-        if (data != null) {
-            data.removeCustomTag(customTagId);
-            refreshPlayerDisplay(uuid);
-            refreshPlayerParticle(uuid);
-        }
-
-        return plugin.getDatabaseManager().deleteCustomTag(uuid, customTagId);
+        return AsyncCommit.after(plugin.getDatabaseManager().deleteCustomTag(uuid, customTagId), this::executeSync, () -> {
+            PlayerTagData data = playerDataCache.get(uuid);
+            if (data != null) {
+                data.removeCustomTag(customTagId);
+                refreshPlayerDisplay(uuid);
+                refreshPlayerParticle(uuid);
+            }
+        });
     }
 
     public void shutdown() {
@@ -489,9 +543,11 @@ public class TagManager implements Listener {
             expireTask.cancel();
             expireTask = null;
         }
+        stopSyncTask();
 
         playerDataCache.clear();
         pendingWriteCounts.clear();
+        failedPlayerWrites.clear();
     }
 
     private void refreshPlayerDisplay(UUID uuid) {

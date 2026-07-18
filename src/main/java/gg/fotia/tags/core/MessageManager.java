@@ -1,9 +1,8 @@
 package gg.fotia.tags.core;
 
 import gg.fotia.tags.FotiaTags;
-import gg.fotia.tags.util.LegacyColorConverter;
+import gg.fotia.tags.util.TextComponentParser;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -20,7 +19,6 @@ import java.util.Map;
 public class MessageManager {
 
     private final FotiaTags plugin;
-    private final MiniMessage miniMessage;
     private FileConfiguration langConfig;
     private FileConfiguration bundledLangConfig;
     private FileConfiguration bundledZhConfig;
@@ -28,7 +26,6 @@ public class MessageManager {
 
     public MessageManager(FotiaTags plugin) {
         this.plugin = plugin;
-        this.miniMessage = MiniMessage.miniMessage();
         reload();
     }
 
@@ -79,7 +76,7 @@ public class MessageManager {
     }
 
     public Component parse(String text) {
-        return miniMessage.deserialize("<!i>" + LegacyColorConverter.convertToMiniMessage(text));
+        return TextComponentParser.parse(text);
     }
 
     public void send(Player player, String key) {

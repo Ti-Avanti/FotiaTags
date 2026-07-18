@@ -19,6 +19,8 @@ settings:
   language: zh_CN
   # 过期检查间隔（秒）
   expire-check-interval: 60
+  # MySQL跨服数据同步间隔（秒），仅database.type为mysql时生效，0表示关闭
+  cross-server-sync-interval: 60
 
 # 玩家显示功能
 # 开启后可以把当前称号直接显示到玩家头顶名牌、Tab列表名字和聊天格式中。

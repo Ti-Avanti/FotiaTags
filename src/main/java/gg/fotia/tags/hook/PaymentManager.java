@@ -40,7 +40,11 @@ public class PaymentManager {
     }
 
     public boolean isAvailable() {
-        return switch (getProvider()) {
+        return isAvailable(createSnapshot());
+    }
+
+    public boolean isAvailable(PaymentSnapshot snapshot) {
+        return switch (snapshot.provider()) {
             case "playerpoints" -> playerPointsApi != null;
             case "vault" -> economy != null;
             default -> false;
@@ -48,29 +52,41 @@ public class PaymentManager {
     }
 
     public String getPriceText() {
-        return switch (getProvider()) {
-            case "playerpoints" -> plugin.getConfigManager().getConfig().getInt("custom-tags.purchase.playerpoints-price", 500) + " PlayerPoints";
-            case "vault" -> plugin.getConfigManager().getConfig().getDouble("custom-tags.purchase.vault-price", 10000.0) + " 金币";
-            default -> getProvider();
+        return getPriceText(createSnapshot());
+    }
+
+    public String getPriceText(PaymentSnapshot snapshot) {
+        return switch (snapshot.provider()) {
+            case "playerpoints" -> (int) Math.floor(snapshot.amount()) + " PlayerPoints";
+            case "vault" -> snapshot.amount() + " 金币";
+            default -> snapshot.provider();
         };
     }
 
     public boolean hasEnough(Player player) {
-        return switch (getProvider()) {
+        return hasEnough(player, createSnapshot());
+    }
+
+    public boolean hasEnough(Player player, PaymentSnapshot snapshot) {
+        return switch (snapshot.provider()) {
             case "playerpoints" -> playerPointsApi != null
-                    && playerPointsApi.look(player.getUniqueId()) >= getPlayerPointsPrice();
+                    && playerPointsApi.look(player.getUniqueId()) >= (int) Math.floor(snapshot.amount());
             case "vault" -> economy != null
-                    && economy.has(player, getVaultPrice());
+                    && economy.has(player, snapshot.amount());
             default -> false;
         };
     }
 
     public boolean withdraw(Player player) {
-        return switch (getProvider()) {
+        return withdraw(player, createSnapshot());
+    }
+
+    public boolean withdraw(Player player, PaymentSnapshot snapshot) {
+        return switch (snapshot.provider()) {
             case "playerpoints" -> playerPointsApi != null
-                    && playerPointsApi.take(player.getUniqueId(), getPlayerPointsPrice());
+                    && playerPointsApi.take(player.getUniqueId(), (int) Math.floor(snapshot.amount()));
             case "vault" -> economy != null
-                    && economy.withdrawPlayer(player, getVaultPrice()).transactionSuccess();
+                    && economy.withdrawPlayer(player, snapshot.amount()).transactionSuccess();
             default -> false;
         };
     }
@@ -81,23 +97,6 @@ public class PaymentManager {
             case "vault" -> new PaymentSnapshot("vault", getVaultPrice());
             default -> new PaymentSnapshot(getProvider(), 0.0);
         };
-    }
-
-    public void refund(Player player) {
-        switch (getProvider()) {
-            case "playerpoints" -> {
-                if (playerPointsApi != null) {
-                    playerPointsApi.give(player.getUniqueId(), getPlayerPointsPrice());
-                }
-            }
-            case "vault" -> {
-                if (economy != null) {
-                    economy.depositPlayer(player, getVaultPrice());
-                }
-            }
-            default -> {
-            }
-        }
     }
 
     public boolean refund(Player player, String provider, double amount) {

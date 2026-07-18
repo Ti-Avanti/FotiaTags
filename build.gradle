@@ -1,10 +1,9 @@
 plugins {
     id 'java'
-    id 'com.gradleup.shadow' version '9.4.1'
 }
 
 group = 'gg.fotia'
-version = '1.0.10'
+version = '1.0.11'
 
 java {
     toolchain {
@@ -32,10 +31,10 @@ dependencies {
         exclude group: 'org.spigotmc'
     }
 
-    implementation 'com.zaxxer:HikariCP:5.1.0'
-    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
-    implementation 'com.mysql:mysql-connector-j:8.4.0'
+    compileOnly 'org.xerial:sqlite-jdbc:3.45.3.0'
+    compileOnly 'com.mysql:mysql-connector-j:8.4.0'
 
+    testImplementation 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -46,30 +45,6 @@ processResources {
     filesMatching('plugin.yml') {
         expand version: version, project: [version: version]
     }
-}
-
-shadowJar {
-    archiveClassifier.set('')
-    relocate 'com.zaxxer.hikari', 'gg.fotia.tags.libs.hikari'
-    mergeServiceFiles()
-
-    exclude 'org/sqlite/native/Linux-Android/**'
-    exclude 'org/sqlite/native/Linux-Musl/**'
-    exclude 'org/sqlite/native/FreeBSD/**'
-    exclude 'org/sqlite/native/Mac/**'
-    exclude 'org/sqlite/native/Linux/aarch64/**'
-    exclude 'org/sqlite/native/Linux/arm/**'
-    exclude 'org/sqlite/native/Linux/armv6/**'
-    exclude 'org/sqlite/native/Linux/armv7/**'
-    exclude 'org/sqlite/native/Linux/x86/**'
-    exclude 'org/sqlite/native/Linux/ppc64/**'
-    exclude 'org/sqlite/native/Windows/aarch64/**'
-    exclude 'org/sqlite/native/Windows/armv7/**'
-    exclude 'org/sqlite/native/Windows/x86/**'
-}
-
-tasks.named('build') {
-    dependsOn shadowJar
 }
 
 tasks.withType(JavaCompile).configureEach {

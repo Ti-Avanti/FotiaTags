@@ -8,8 +8,8 @@ import gg.fotia.tags.tag.PlayerTagData;
 import gg.fotia.tags.tag.Tag;
 import gg.fotia.tags.tag.TagManager;
 import gg.fotia.tags.util.LegacyColorConverter;
+import gg.fotia.tags.util.TextComponentParser;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -45,14 +45,12 @@ import java.util.concurrent.CompletableFuture;
 public class PlayerTagAdminManager implements Listener {
 
     private final FotiaTags plugin;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Map<UUID, MenuSession> openMenus = new HashMap<>();
     private final Set<UUID> reopeningMenus = new HashSet<>();
     private final NamespacedKey actionKey;
     private final NamespacedKey playerKey;
     private final NamespacedKey playerNameKey;
     private final NamespacedKey tagKey;
-    private final boolean modernItemMetaApi;
 
     private PlayerListMenu playerListMenu;
     private PlayerTagMenu playerTagMenu;
@@ -63,7 +61,6 @@ public class PlayerTagAdminManager implements Listener {
         this.playerKey = new NamespacedKey(plugin, "admin_player_uuid");
         this.playerNameKey = new NamespacedKey(plugin, "admin_player_name");
         this.tagKey = new NamespacedKey(plugin, "admin_tag_id");
-        this.modernItemMetaApi = isAtLeastMinecraftVersion(1, 21, 4);
         Bukkit.getPluginManager().registerEvents(this, plugin);
         reload();
     }
@@ -641,7 +638,7 @@ public class PlayerTagAdminManager implements Listener {
     }
 
     private Component parse(String text) {
-        return miniMessage.deserialize("<!i>" + LegacyColorConverter.convertToMiniMessage(text));
+        return TextComponentParser.parse(text);
     }
 
     private String getString(ItemStack item, NamespacedKey key) {
@@ -695,59 +692,16 @@ public class PlayerTagAdminManager implements Listener {
         return ((size + 8) / 9) * 9;
     }
 
-    private boolean isAtLeastMinecraftVersion(int major, int minor, int patch) {
-        String version = Bukkit.getBukkitVersion().split("-", 2)[0];
-        String[] parts = version.split("\\.");
-        int actualMajor = parts.length > 0 ? parseVersionPart(parts[0]) : 0;
-        int actualMinor = parts.length > 1 ? parseVersionPart(parts[1]) : 0;
-        int actualPatch = parts.length > 2 ? parseVersionPart(parts[2]) : 0;
-        if (actualMajor != major) {
-            return actualMajor > major;
-        }
-        if (actualMinor != minor) {
-            return actualMinor > minor;
-        }
-        return actualPatch >= patch;
-    }
-
-    private int parseVersionPart(String part) {
-        int end = 0;
-        while (end < part.length() && Character.isDigit(part.charAt(end))) {
-            end++;
-        }
-        return end == 0 ? 0 : Integer.parseInt(part.substring(0, end));
-    }
-
     private void setItemModelCompat(ItemMeta meta, String itemModel) {
-        if (!modernItemMetaApi) {
-            return;
-        }
-        NamespacedKey key = NamespacedKey.fromString(itemModel);
-        if (key != null) {
-            meta.setItemModel(key);
-        }
+        GuiItemMetaCompat.setItemModel(meta, itemModel);
     }
 
     private void setTooltipStyleCompat(ItemMeta meta, String tooltipStyle) {
-        if (!modernItemMetaApi) {
-            return;
-        }
-        NamespacedKey key = NamespacedKey.fromString(tooltipStyle);
-        if (key != null) {
-            meta.setTooltipStyle(key);
-        }
+        GuiItemMetaCompat.setTooltipStyle(meta, tooltipStyle);
     }
 
     private void setGlowCompat(ItemMeta meta) {
-        if (modernItemMetaApi) {
-            meta.setEnchantmentGlintOverride(true);
-            return;
-        }
-        Enchantment unbreaking = Enchantment.getByKey(NamespacedKey.minecraft("unbreaking"));
-        if (unbreaking != null) {
-            meta.addEnchant(unbreaking, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
+        GuiItemMetaCompat.setGlow(meta);
     }
 
     private AdminMenu defaultPlayerListMenu() {

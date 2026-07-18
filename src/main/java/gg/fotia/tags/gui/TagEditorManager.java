@@ -1,11 +1,12 @@
 package gg.fotia.tags.gui;
 
 import gg.fotia.tags.FotiaTags;
+import gg.fotia.tags.core.MessageManager;
 import gg.fotia.tags.particle.ParticleEffect;
 import gg.fotia.tags.tag.Tag;
 import gg.fotia.tags.util.LegacyColorConverter;
+import gg.fotia.tags.util.TextComponentParser;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -41,11 +42,9 @@ import java.util.UUID;
 public class TagEditorManager implements Listener {
 
     private final FotiaTags plugin;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Map<UUID, EditorSession> editorSessions = new HashMap<>();
     private final Map<UUID, ChatInputSession> chatInputSessions = new HashMap<>();
     private final Set<UUID> reopening = new HashSet<>();
-    private final boolean modernItemMetaApi;
 
     private EditorMenu listMenu;
     private EditorMenu editMenu;
@@ -66,7 +65,6 @@ public class TagEditorManager implements Listener {
 
     public TagEditorManager(FotiaTags plugin) {
         this.plugin = plugin;
-        this.modernItemMetaApi = isAtLeastMinecraftVersion(1, 21, 4);
         Bukkit.getPluginManager().registerEvents(this, plugin);
         reload();
     }
@@ -545,7 +543,7 @@ public class TagEditorManager implements Listener {
     }
 
     private Component parse(String text) {
-        return miniMessage.deserialize("<!i>" + color(text));
+        return TextComponentParser.parse(text);
     }
 
     private void setString(ItemStack item, String key, String value) {
@@ -662,7 +660,7 @@ public class TagEditorManager implements Listener {
             case "save_tag" -> {
                 saveTagConfig();
                 plugin.getTagManager().loadTags();
-                player.sendMessage(miniMessage.deserialize("<green>称号配置已保存并重载！"));
+                plugin.getMessageManager().send(player, "tag-editor-saved");
                 openTagListEditor(player, 0);
             }
             case "delete_tag" -> openConfirmDelete(player, session.editingTagId);
@@ -680,7 +678,7 @@ public class TagEditorManager implements Listener {
         switch (action) {
             case "confirm_delete" -> {
                 deleteTag(session.editingTagId);
-                player.sendMessage(miniMessage.deserialize("<green>称号已删除！"));
+                plugin.getMessageManager().send(player, "tag-editor-deleted");
                 openTagListEditor(player, 0);
             }
             case "cancel_delete" -> openTagEditor(player, session.editingTagId);
@@ -698,7 +696,7 @@ public class TagEditorManager implements Listener {
             case "back_to_edit" -> openTagEditor(player, session.editingTagId);
             case "clear_particle" -> {
                 setTagParticle(session.editingTagId, "");
-                player.sendMessage(miniMessage.deserialize("<green>已清空粒子效果"));
+                plugin.getMessageManager().send(player, "tag-editor-particle-cleared");
                 openTagEditor(player, session.editingTagId);
             }
             case "select_particle" -> {
@@ -706,7 +704,8 @@ public class TagEditorManager implements Listener {
                     return;
                 }
                 setTagParticle(session.editingTagId, particleEffectId);
-                player.sendMessage(miniMessage.deserialize("<green>已设置粒子效果: <white>" + particleEffectId));
+                plugin.getMessageManager().send(player, "tag-editor-particle-set",
+                        MessageManager.of("particle", particleEffectId));
                 openTagEditor(player, session.editingTagId);
             }
             default -> {
@@ -717,8 +716,8 @@ public class TagEditorManager implements Listener {
     private void startCreateTag(Player player) {
         player.closeInventory();
         chatInputSessions.put(player.getUniqueId(), new ChatInputSession(null, "new_tag_id"));
-        player.sendMessage(miniMessage.deserialize("<yellow>请在聊天框输入新称号的ID（英文，如 vip_gold）:"));
-        player.sendMessage(miniMessage.deserialize("<gray>输入 <red>cancel</red> 取消"));
+        plugin.getMessageManager().send(player, "tag-editor-create-prompt");
+        plugin.getMessageManager().send(player, "tag-editor-input-cancel");
     }
 
     private void startEditField(Player player, String tagId, String field) {
@@ -726,8 +725,8 @@ public class TagEditorManager implements Listener {
         chatInputSessions.put(player.getUniqueId(), new ChatInputSession(tagId, field));
 
         String fieldName = getFieldDisplayName(field);
-        player.sendMessage(miniMessage.deserialize("<yellow>请在聊天框输入新的 <white>" + fieldName + "</white>:"));
-        player.sendMessage(miniMessage.deserialize("<gray>输入 <red>cancel</red> 取消，输入 <yellow>clear</yellow> 清空"));
+        plugin.getMessageManager().send(player, "tag-editor-edit-prompt", MessageManager.of("field", fieldName));
+        plugin.getMessageManager().send(player, "tag-editor-input-controls");
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -763,13 +762,13 @@ public class TagEditorManager implements Listener {
 
     private void handleCreateNewTag(Player player, String tagId) {
         if (!tagId.matches("^[a-zA-Z0-9_]+$")) {
-            player.sendMessage(miniMessage.deserialize("<red>无效的称号ID！只能包含字母、数字和下划线"));
+            plugin.getMessageManager().send(player, "tag-editor-invalid-id");
             Bukkit.getScheduler().runTask(plugin, () -> openTagListEditor(player, 0));
             return;
         }
 
         if (plugin.getTagManager().getTag(tagId) != null) {
-            player.sendMessage(miniMessage.deserialize("<red>称号ID已存在！"));
+            plugin.getMessageManager().send(player, "tag-editor-id-exists");
             Bukkit.getScheduler().runTask(plugin, () -> openTagListEditor(player, 0));
             return;
         }
@@ -790,7 +789,7 @@ public class TagEditorManager implements Listener {
         saveTagConfig();
         plugin.getTagManager().loadTags();
 
-        player.sendMessage(miniMessage.deserialize("<green>称号 <white>" + tagId + "</white> 创建成功！"));
+        plugin.getMessageManager().send(player, "tag-editor-created", MessageManager.of("tag", tagId));
         Bukkit.getScheduler().runTask(plugin, () -> openTagEditor(player, tagId));
     }
 
@@ -809,7 +808,7 @@ public class TagEditorManager implements Listener {
             case "material" -> {
                 Material mat = Material.matchMaterial(value.toUpperCase());
                 if (mat == null && !value.isEmpty()) {
-                    player.sendMessage(miniMessage.deserialize("<red>无效的材质名称！"));
+                    plugin.getMessageManager().send(player, "tag-editor-invalid-material");
                     Bukkit.getScheduler().runTask(plugin, () -> openTagEditor(player, tagId));
                     return;
                 }
@@ -823,7 +822,7 @@ public class TagEditorManager implements Listener {
                     int cmd = value.isEmpty() ? 0 : Integer.parseInt(value);
                     tagsConfig.set(configPath + "custom-model-data", cmd);
                 } catch (NumberFormatException e) {
-                    player.sendMessage(miniMessage.deserialize("<red>请输入有效的数字！"));
+                    plugin.getMessageManager().send(player, "tag-editor-invalid-number");
                     Bukkit.getScheduler().runTask(plugin, () -> openTagEditor(player, tagId));
                     return;
                 }
@@ -836,7 +835,7 @@ public class TagEditorManager implements Listener {
         saveTagConfig();
         plugin.getTagManager().loadTags();
 
-        player.sendMessage(miniMessage.deserialize("<green>已更新！"));
+        plugin.getMessageManager().send(player, "tag-editor-updated");
         Bukkit.getScheduler().runTask(plugin, () -> openTagEditor(player, tagId));
     }
 
@@ -904,63 +903,16 @@ public class TagEditorManager implements Listener {
         return validSlots;
     }
 
-    private boolean isAtLeastMinecraftVersion(int major, int minor, int patch) {
-        String version = Bukkit.getBukkitVersion().split("-", 2)[0];
-        String[] parts = version.split("\\.");
-        int actualMajor = parts.length > 0 ? parseVersionPart(parts[0]) : 0;
-        int actualMinor = parts.length > 1 ? parseVersionPart(parts[1]) : 0;
-        int actualPatch = parts.length > 2 ? parseVersionPart(parts[2]) : 0;
-
-        if (actualMajor != major) {
-            return actualMajor > major;
-        }
-        if (actualMinor != minor) {
-            return actualMinor > minor;
-        }
-        return actualPatch >= patch;
-    }
-
-    private int parseVersionPart(String part) {
-        int end = 0;
-        while (end < part.length() && Character.isDigit(part.charAt(end))) {
-            end++;
-        }
-        return end == 0 ? 0 : Integer.parseInt(part.substring(0, end));
-    }
-
     private void setItemModelCompat(ItemMeta meta, String itemModel) {
-        if (!modernItemMetaApi) {
-            return;
-        }
-
-        NamespacedKey key = NamespacedKey.fromString(itemModel);
-        if (key != null) {
-            meta.setItemModel(key);
-        }
+        GuiItemMetaCompat.setItemModel(meta, itemModel);
     }
 
     private void setTooltipStyleCompat(ItemMeta meta, String tooltip) {
-        if (!modernItemMetaApi) {
-            return;
-        }
-
-        NamespacedKey key = NamespacedKey.fromString(tooltip);
-        if (key != null) {
-            meta.setTooltipStyle(key);
-        }
+        GuiItemMetaCompat.setTooltipStyle(meta, tooltip);
     }
 
     private void setGlowCompat(ItemMeta meta) {
-        if (modernItemMetaApi) {
-            meta.setEnchantmentGlintOverride(true);
-            return;
-        }
-
-        Enchantment unbreaking = Enchantment.getByKey(NamespacedKey.minecraft("unbreaking"));
-        if (unbreaking != null) {
-            meta.addEnchant(unbreaking, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
+        GuiItemMetaCompat.setGlow(meta);
     }
 
     private EditorMenuItem withParticleGuiItem(EditorMenuItem template, ParticleEffect effect) {

@@ -234,16 +234,31 @@ public class ParticleManager {
 
     private void spawn(Player player, ParticleEffect effect) {
         Location base = player.getLocation();
+        List<Player> viewers = onlyVisibleToNearby ? findNearbyViewers(base) : List.of();
         switch (effect.style()) {
-            case "halo" -> spawnHalo(player, effect, base);
-            case "trail" -> spawnTrail(player, effect, base);
-            case "feet" -> spawnFeet(player, effect, base);
-            case "burst" -> spawnBurst(player, effect, base);
-            default -> spawnBurst(player, effect, base);
+            case "halo" -> spawnHalo(effect, base, viewers);
+            case "trail" -> spawnTrail(effect, base, viewers);
+            case "feet" -> spawnFeet(effect, base, viewers);
+            case "burst" -> spawnBurst(effect, base, viewers);
+            default -> spawnBurst(effect, base, viewers);
         }
     }
 
-    private void spawnHalo(Player player, ParticleEffect effect, Location base) {
+    private List<Player> findNearbyViewers(Location base) {
+        World world = base.getWorld();
+        if (world == null) {
+            return List.of();
+        }
+        List<Player> viewers = new ArrayList<>();
+        for (Player viewer : world.getPlayers()) {
+            if (viewer.getLocation().distanceSquared(base) <= viewDistanceSquared) {
+                viewers.add(viewer);
+            }
+        }
+        return viewers;
+    }
+
+    private void spawnHalo(ParticleEffect effect, Location base, List<Player> viewers) {
         double rotation = tick * 0.15;
         int points = Math.max(4, effect.amount());
         for (int i = 0; i < points; i++) {
@@ -253,11 +268,11 @@ public class ParticleManager {
                     effect.yOffset(),
                     Math.sin(angle) * effect.radius()
             );
-            spawnParticle(player, effect, location, 1, 0.0, 0.0, 0.0);
+            spawnParticle(effect, location, viewers, 1, 0.0, 0.0, 0.0);
         }
     }
 
-    private void spawnTrail(Player player, ParticleEffect effect, Location base) {
+    private void spawnTrail(ParticleEffect effect, Location base, List<Player> viewers) {
         Vector direction = base.getDirection();
         direction.setY(0);
         if (direction.lengthSquared() < 0.0001) {
@@ -270,11 +285,11 @@ public class ParticleManager {
             Location location = base.clone()
                     .add(direction.clone().multiply(distance))
                     .add(0, effect.yOffset(), 0);
-            spawnParticle(player, effect, location, 1, 0.05, 0.05, 0.05);
+            spawnParticle(effect, location, viewers, 1, 0.05, 0.05, 0.05);
         }
     }
 
-    private void spawnFeet(Player player, ParticleEffect effect, Location base) {
+    private void spawnFeet(ParticleEffect effect, Location base, List<Player> viewers) {
         double rotation = tick * 0.2;
         int points = Math.max(4, effect.amount());
         for (int i = 0; i < points; i++) {
@@ -284,16 +299,17 @@ public class ParticleManager {
                     effect.yOffset(),
                     Math.sin(angle) * effect.radius()
             );
-            spawnParticle(player, effect, location, 1, 0.0, 0.0, 0.0);
+            spawnParticle(effect, location, viewers, 1, 0.0, 0.0, 0.0);
         }
     }
 
-    private void spawnBurst(Player player, ParticleEffect effect, Location base) {
+    private void spawnBurst(ParticleEffect effect, Location base, List<Player> viewers) {
         Location location = base.clone().add(0, effect.yOffset(), 0);
-        spawnParticle(player, effect, location, effect.amount(), effect.radius(), effect.radius(), effect.radius());
+        spawnParticle(effect, location, viewers, effect.amount(), effect.radius(), effect.radius(), effect.radius());
     }
 
-    private void spawnParticle(Player owner, ParticleEffect effect, Location location, int amount, double offsetX, double offsetY, double offsetZ) {
+    private void spawnParticle(ParticleEffect effect, Location location, List<Player> viewers,
+                               int amount, double offsetX, double offsetY, double offsetZ) {
         World world = location.getWorld();
         if (world == null) {
             return;
@@ -304,10 +320,8 @@ public class ParticleManager {
             return;
         }
 
-        for (Player viewer : new ArrayList<>(world.getPlayers())) {
-            if (viewer.getLocation().distanceSquared(owner.getLocation()) <= viewDistanceSquared) {
-                viewer.spawnParticle(effect.particle(), location, amount, offsetX, offsetY, offsetZ, effect.speed());
-            }
+        for (Player viewer : viewers) {
+            viewer.spawnParticle(effect.particle(), location, amount, offsetX, offsetY, offsetZ, effect.speed());
         }
     }
 

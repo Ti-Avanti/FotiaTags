@@ -6,8 +6,8 @@ import gg.fotia.tags.tag.PlayerTagData;
 import gg.fotia.tags.tag.Tag;
 import gg.fotia.tags.tag.TagManager;
 import gg.fotia.tags.util.LegacyColorConverter;
+import gg.fotia.tags.util.TextComponentParser;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -30,10 +30,8 @@ import java.util.*;
 public class MenuManager implements Listener {
 
     private final FotiaTags plugin;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Map<UUID, MenuSession> openMenus = new HashMap<>();
     private final Set<UUID> reopeningMenus = new HashSet<>();
-    private final boolean modernItemMetaApi;
 
     // 菜单配置
     private String menuTitle;
@@ -56,7 +54,6 @@ public class MenuManager implements Listener {
 
     public MenuManager(FotiaTags plugin) {
         this.plugin = plugin;
-        this.modernItemMetaApi = isAtLeastMinecraftVersion(1, 21, 4);
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -268,7 +265,7 @@ public class MenuManager implements Listener {
 
     private void openActionMenu(Player player, ActionMenuConfig menu, CustomTag customTag, int page, String menuType) {
         String title = applyCustomPlaceholders(menu.title, customTag);
-        Inventory inventory = Bukkit.createInventory(null, menu.size, miniMessage.deserialize("<!i>" + title));
+        Inventory inventory = Bukkit.createInventory(null, menu.size, TextComponentParser.parse(title));
 
         for (int row = 0; row < menu.layout.size() && row < menu.size / 9; row++) {
             String rowLayout = menu.layout.get(row);
@@ -310,13 +307,13 @@ public class MenuManager implements Listener {
             return item;
         }
 
-        meta.displayName(miniMessage.deserialize("<!i>" + applyCustomPlaceholders(config.name, customTag)));
+        meta.displayName(TextComponentParser.parse(applyCustomPlaceholders(config.name, customTag)));
         if (config.lore != null && !config.lore.isEmpty()) {
             List<Component> lore = new ArrayList<>();
             for (String line : config.lore) {
                 String parsedLine = applyCustomPlaceholders(line, customTag);
                 if (!parsedLine.isEmpty()) {
-                    lore.add(miniMessage.deserialize("<!i>" + parsedLine));
+                    lore.add(TextComponentParser.parse(parsedLine));
                 }
             }
             meta.lore(lore);
@@ -494,7 +491,7 @@ public class MenuManager implements Listener {
             title = title + " <gray>(" + (page + 1) + "/" + totalPages + ")";
         }
 
-        Inventory inventory = Bukkit.createInventory(null, menuSize, miniMessage.deserialize("<!i>" + title));
+        Inventory inventory = Bukkit.createInventory(null, menuSize, TextComponentParser.parse(title));
 
         // 填充布局物品
         for (int row = 0; row < layout.length && row < menuSize / 9; row++) {
@@ -605,7 +602,7 @@ public class MenuManager implements Listener {
             if (player != null) {
                 name = name.replace("%player%", player.getName());
             }
-            meta.displayName(miniMessage.deserialize("<!i>" + name));
+            meta.displayName(TextComponentParser.parse(name));
         }
 
         // 设置lore
@@ -615,7 +612,7 @@ public class MenuManager implements Listener {
                 if (player != null) {
                     line = line.replace("%player%", player.getName());
                 }
-                lore.add(miniMessage.deserialize("<!i>" + line));
+                lore.add(TextComponentParser.parse(line));
             }
             meta.lore(lore);
         }
@@ -651,7 +648,7 @@ public class MenuManager implements Listener {
         String name = template.name
                 .replace("%tag_name%", LegacyColorConverter.convertToMiniMessage(tag.getDisplayName()))
                 .replace("%tag_id%", tag.getId());
-        meta.displayName(miniMessage.deserialize("<!i>" + name));
+        meta.displayName(TextComponentParser.parse(name));
 
         // 设置lore
         if (template.lore != null && !template.lore.isEmpty()) {
@@ -665,7 +662,7 @@ public class MenuManager implements Listener {
                         .replace("%tag_prefix%", LegacyColorConverter.convertToMiniMessage(tag.getPrefix()))
                         .replace("%tag_suffix%", LegacyColorConverter.convertToMiniMessage(tag.getSuffix()))
                         .replace("%tag_expire%", expireStr);
-                lore.add(miniMessage.deserialize("<!i>" + line));
+                lore.add(TextComponentParser.parse(line));
             }
             meta.lore(lore);
         }
@@ -720,7 +717,7 @@ public class MenuManager implements Listener {
         String name = template.name
                 .replace("%tag_name%", LegacyColorConverter.convertToMiniMessage(tagName))
                 .replace("%tag_id%", tagId);
-        meta.displayName(miniMessage.deserialize("<!i>" + name));
+        meta.displayName(TextComponentParser.parse(name));
 
         if (template.lore != null && !template.lore.isEmpty()) {
             List<Component> lore = new ArrayList<>();
@@ -732,7 +729,7 @@ public class MenuManager implements Listener {
                         .replace("%tag_prefix%", LegacyColorConverter.convertToMiniMessage(displayPrefix))
                         .replace("%tag_suffix%", LegacyColorConverter.convertToMiniMessage(displaySuffix))
                         .replace("%tag_expire%", plugin.getMessageManager().formatExpireTime(-1));
-                lore.add(miniMessage.deserialize("<!i>" + line));
+                lore.add(TextComponentParser.parse(line));
             }
             meta.lore(lore);
         }
@@ -1030,7 +1027,7 @@ public class MenuManager implements Listener {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command));
             } else if (action.startsWith("[message]") || action.startsWith("message:")) {
                 String message = action.replace("[message]", "").replace("message:", "").trim();
-                player.sendMessage(miniMessage.deserialize("<!i>" + message));
+                player.sendMessage(TextComponentParser.parse(message));
             }
         }
     }
@@ -1046,69 +1043,19 @@ public class MenuManager implements Listener {
         }
     }
 
-    private boolean isAtLeastMinecraftVersion(int major, int minor, int patch) {
-        String version = Bukkit.getBukkitVersion().split("-", 2)[0];
-        String[] parts = version.split("\\.");
-        int actualMajor = parts.length > 0 ? parseVersionPart(parts[0]) : 0;
-        int actualMinor = parts.length > 1 ? parseVersionPart(parts[1]) : 0;
-        int actualPatch = parts.length > 2 ? parseVersionPart(parts[2]) : 0;
-
-        if (actualMajor != major) {
-            return actualMajor > major;
-        }
-        if (actualMinor != minor) {
-            return actualMinor > minor;
-        }
-        return actualPatch >= patch;
-    }
-
-    private int parseVersionPart(String part) {
-        int end = 0;
-        while (end < part.length() && Character.isDigit(part.charAt(end))) {
-            end++;
-        }
-        if (end == 0) {
-            return 0;
-        }
-        return Integer.parseInt(part.substring(0, end));
-    }
-
     // 兼容1.20.4的方法 - setItemModel在1.21.4+才有
     private void setItemModelCompat(ItemMeta meta, String itemModel) {
-        if (!modernItemMetaApi) {
-            return;
-        }
-
-        NamespacedKey key = NamespacedKey.fromString(itemModel);
-        if (key != null) {
-            meta.setItemModel(key);
-        }
+        GuiItemMetaCompat.setItemModel(meta, itemModel);
     }
 
     // 兼容1.20.4的方法 - setTooltipStyle在1.21.4+才有
     private void setTooltipStyleCompat(ItemMeta meta, String tooltip) {
-        if (!modernItemMetaApi) {
-            return;
-        }
-
-        NamespacedKey key = NamespacedKey.fromString(tooltip);
-        if (key != null) {
-            meta.setTooltipStyle(key);
-        }
+        GuiItemMetaCompat.setTooltipStyle(meta, tooltip);
     }
 
     // 兼容1.20.4的方法 - setEnchantmentGlintOverride在1.21.4+才有
     private void setGlowCompat(ItemMeta meta) {
-        if (modernItemMetaApi) {
-            meta.setEnchantmentGlintOverride(true);
-            return;
-        }
-
-        Enchantment unbreaking = Enchantment.getByKey(NamespacedKey.minecraft("unbreaking"));
-        if (unbreaking != null) {
-            meta.addEnchant(unbreaking, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        }
+        GuiItemMetaCompat.setGlow(meta);
     }
 
     private static class MenuItemConfig {

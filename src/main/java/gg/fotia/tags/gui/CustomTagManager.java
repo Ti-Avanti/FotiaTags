@@ -7,9 +7,11 @@ import gg.fotia.tags.tag.CustomTag;
 import gg.fotia.tags.tag.TagManager;
 import gg.fotia.tags.util.CustomTagTextFilter;
 import gg.fotia.tags.util.LegacyColorConverter;
+import gg.fotia.tags.util.PlayerOperationLock;
+import gg.fotia.tags.util.SafeMiniMessageValidator;
+import gg.fotia.tags.util.TextComponentParser;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -49,13 +51,13 @@ public class CustomTagManager implements Listener {
     private static final Pattern MINIMESSAGE_PATTERN = Pattern.compile("<[^>]+>");
 
     private final FotiaTags plugin;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Map<UUID, CustomTagDraft> drafts = new HashMap<>();
     private final Map<UUID, InputType> inputSessions = new HashMap<>();
     private final Map<UUID, MenuType> openMenus = new HashMap<>();
     private final Set<UUID> reopeningMenus = new HashSet<>();
     private final Map<String, CustomTagIcon> icons = new LinkedHashMap<>();
-    private final boolean modernItemMetaApi;
+    private final PlayerOperationLock purchaseOperations = new PlayerOperationLock();
+    private final PlayerOperationLock deleteOperations = new PlayerOperationLock();
 
     private boolean enabled;
     private String displayName;
@@ -81,7 +83,6 @@ public class CustomTagManager implements Listener {
 
     public CustomTagManager(FotiaTags plugin) {
         this.plugin = plugin;
-        this.modernItemMetaApi = isAtLeastMinecraftVersion(1, 21, 4);
         Bukkit.getPluginManager().registerEvents(this, plugin);
         reload();
     }
@@ -685,7 +686,8 @@ public class CustomTagManager implements Listener {
             plugin.getMessageManager().send(player, "custom-tag-colors-denied");
             return false;
         }
-        if (!allowMiniMessage && MINIMESSAGE_PATTERN.matcher(input).find()) {
+        if ((!allowMiniMessage && MINIMESSAGE_PATTERN.matcher(input).find())
+                || (allowMiniMessage && !SafeMiniMessageValidator.isSafe(input))) {
             plugin.getMessageManager().send(player, "custom-tag-minimessage-denied");
             return false;
         }
@@ -722,7 +724,14 @@ public class CustomTagManager implements Listener {
             return;
         }
 
+        UUID playerId = player.getUniqueId();
+        if (!purchaseOperations.tryAcquire(playerId)) {
+            plugin.getMessageManager().send(player, "custom-tag-purchase-processing");
+            return;
+        }
+
         if (hasReachedMaxOwned(player)) {
+            purchaseOperations.release(playerId);
             sendLocked(player);
             openCustomMenu(player);
             return;
@@ -732,45 +741,77 @@ public class CustomTagManager implements Listener {
         String customTagId = plugin.getTagManager().createCustomTagId(UUID.randomUUID().toString().replace("-", "").substring(0, 12));
         CustomTag customTag = draft.toCustomTag(customTagId, prefixEditable, suffixEditable, snapshot.provider(), snapshot.amount());
         if (textFilter.findViolation(customTag.getPrefix() + customTag.getSuffix()).isPresent()) {
+            purchaseOperations.release(playerId);
             plugin.getMessageManager().send(player, "custom-tag-blocked-word");
             openCustomMenu(player);
             return;
         }
 
-        if (!plugin.getPaymentManager().isAvailable()) {
+        if (!plugin.getPaymentManager().isAvailable(snapshot)) {
+            purchaseOperations.release(playerId);
             plugin.getMessageManager().send(player, "custom-tag-payment-unavailable");
             return;
         }
-        if (!plugin.getPaymentManager().hasEnough(player)) {
+        if (!plugin.getPaymentManager().hasEnough(player, snapshot)) {
+            purchaseOperations.release(playerId);
             plugin.getMessageManager().send(player, "custom-tag-insufficient-funds",
-                    MessageManager.of("price", plugin.getPaymentManager().getPriceText()));
+                    MessageManager.of("price", plugin.getPaymentManager().getPriceText(snapshot)));
             return;
         }
-        if (!plugin.getPaymentManager().withdraw(player)) {
+        if (!plugin.getPaymentManager().withdraw(player, snapshot)) {
+            purchaseOperations.release(playerId);
             plugin.getMessageManager().send(player, "custom-tag-purchase-failed");
             return;
         }
 
-        persistCustomTag(player, customTag, true);
+        persistCustomTag(player, customTag);
     }
 
-    private void persistCustomTag(Player player, CustomTag customTag, boolean charged) {
-        plugin.getDatabaseManager().saveCustomTag(player.getUniqueId(), customTag)
-                .whenComplete((ignored, throwable) -> Bukkit.getScheduler().runTask(plugin, () -> {
-                    if (throwable != null) {
-                        if (charged) {
-                            plugin.getPaymentManager().refund(player);
-                        }
-                        plugin.getMessageManager().send(player, charged ? "custom-tag-purchase-failed" : "custom-tag-save-failed");
-                        openCustomMenu(player);
-                        return;
-                    }
+    private void persistCustomTag(Player player, CustomTag customTag) {
+        UUID playerId = player.getUniqueId();
+        try {
+            plugin.getDatabaseManager().saveCustomTag(playerId, customTag)
+                    .whenComplete((ignored, throwable) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                        try {
+                            if (throwable != null) {
+                                boolean refunded = plugin.getPaymentManager().refund(
+                                        player, customTag.getPaymentProvider(), customTag.getPurchasePrice());
+                                plugin.getLogger().severe("Failed to save custom tag " + customTag.getId()
+                                        + " for " + playerId + ": " + throwable.getMessage());
+                                if (player.isOnline()) {
+                                    plugin.getMessageManager().send(player, "custom-tag-purchase-failed");
+                                    if (!refunded) {
+                                        plugin.getMessageManager().send(player, "custom-tag-refund-failed");
+                                    }
+                                    openCustomMenu(player);
+                                }
+                                if (!refunded) {
+                                    plugin.getLogger().severe("Failed to refund " + customTag.getPurchasePrice()
+                                            + " via " + customTag.getPaymentProvider() + " to " + playerId);
+                                }
+                                return;
+                            }
 
-                    plugin.getTagManager().updateCustomTag(player.getUniqueId(), customTag);
-                    drafts.remove(player.getUniqueId());
-                    plugin.getMessageManager().send(player, charged ? "custom-tag-created" : "custom-tag-saved");
-                    openCustomMenu(player);
-                }));
+                            plugin.getTagManager().updateCustomTag(playerId, customTag);
+                            drafts.remove(playerId);
+                            if (player.isOnline()) {
+                                plugin.getMessageManager().send(player, "custom-tag-created");
+                                openCustomMenu(player);
+                            }
+                        } finally {
+                            purchaseOperations.release(playerId);
+                        }
+                    }));
+        } catch (RuntimeException exception) {
+            purchaseOperations.release(playerId);
+            boolean refunded = plugin.getPaymentManager().refund(
+                    player, customTag.getPaymentProvider(), customTag.getPurchasePrice());
+            plugin.getLogger().severe("Failed to start custom tag save for " + playerId + ": " + exception.getMessage());
+            plugin.getMessageManager().send(player, "custom-tag-purchase-failed");
+            if (!refunded) {
+                plugin.getMessageManager().send(player, "custom-tag-refund-failed");
+            }
+        }
     }
 
     private CustomTagDraft getDraft(Player player) {
@@ -798,24 +839,54 @@ public class CustomTagManager implements Listener {
             return;
         }
 
-        double refundAmount = calculateRefundAmount(customTag);
-        plugin.getTagManager().removeCustomTagAsync(player.getUniqueId(), customTagId)
-                .whenComplete((ignored, throwable) -> Bukkit.getScheduler().runTask(plugin, () -> {
-                    if (throwable != null) {
-                        plugin.getMessageManager().send(player, "custom-tag-delete-failed");
-                        runCallback(afterFailure);
-                        return;
-                    }
+        UUID playerId = player.getUniqueId();
+        if (!deleteOperations.tryAcquire(playerId)) {
+            plugin.getMessageManager().send(player, "custom-tag-delete-processing");
+            runCallback(afterFailure);
+            return;
+        }
 
-                    plugin.getMessageManager().send(player, "custom-tag-deleted");
-                    if (refundAmount > 0.0) {
-                        boolean refunded = plugin.getPaymentManager().refund(player, customTag.getPaymentProvider(), refundAmount);
-                        plugin.getMessageManager().send(player,
-                                refunded ? "custom-tag-refunded" : "custom-tag-refund-failed",
-                                MessageManager.of("amount", formatAmount(refundAmount), "provider", customTag.getPaymentProvider()));
-                    }
-                    runCallback(afterSuccess);
-                }));
+        double refundAmount = calculateRefundAmount(customTag);
+        try {
+            plugin.getTagManager().removeCustomTagAsync(playerId, customTagId)
+                    .whenComplete((ignored, throwable) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                        try {
+                            if (throwable != null) {
+                                if (player.isOnline()) {
+                                    plugin.getMessageManager().send(player, "custom-tag-delete-failed");
+                                    runCallback(afterFailure);
+                                }
+                                return;
+                            }
+
+                            if (player.isOnline()) {
+                                plugin.getMessageManager().send(player, "custom-tag-deleted");
+                            }
+                            if (refundAmount > 0.0) {
+                                boolean refunded = plugin.getPaymentManager().refund(player, customTag.getPaymentProvider(), refundAmount);
+                                if (player.isOnline()) {
+                                    plugin.getMessageManager().send(player,
+                                            refunded ? "custom-tag-refunded" : "custom-tag-refund-failed",
+                                            MessageManager.of("amount", formatAmount(refundAmount), "provider", customTag.getPaymentProvider()));
+                                }
+                                if (!refunded) {
+                                    plugin.getLogger().severe("Failed to refund deleted custom tag " + customTagId
+                                            + " to " + playerId);
+                                }
+                            }
+                            if (player.isOnline()) {
+                                runCallback(afterSuccess);
+                            }
+                        } finally {
+                            deleteOperations.release(playerId);
+                        }
+                    }));
+        } catch (RuntimeException exception) {
+            deleteOperations.release(playerId);
+            plugin.getLogger().severe("Failed to start custom tag deletion for " + playerId + ": " + exception.getMessage());
+            plugin.getMessageManager().send(player, "custom-tag-delete-failed");
+            runCallback(afterFailure);
+        }
     }
 
     private double calculateRefundAmount(CustomTag customTag) {
@@ -878,8 +949,7 @@ public class CustomTagManager implements Listener {
     }
 
     private Component parse(String text) {
-        String converted = LegacyColorConverter.convertToMiniMessage(text);
-        return miniMessage.deserialize("<!i>" + (converted != null ? converted : ""));
+        return TextComponentParser.parse(text);
     }
 
     private String emptyText(String text) {
@@ -922,55 +992,16 @@ public class CustomTagManager implements Listener {
         return ((size + 8) / 9) * 9;
     }
 
-    private boolean isAtLeastMinecraftVersion(int major, int minor, int patch) {
-        String version = Bukkit.getBukkitVersion().split("-", 2)[0];
-        String[] parts = version.split("\\.");
-        int actualMajor = parts.length > 0 ? parseVersionPart(parts[0]) : 0;
-        int actualMinor = parts.length > 1 ? parseVersionPart(parts[1]) : 0;
-        int actualPatch = parts.length > 2 ? parseVersionPart(parts[2]) : 0;
-        if (actualMajor != major) {
-            return actualMajor > major;
-        }
-        if (actualMinor != minor) {
-            return actualMinor > minor;
-        }
-        return actualPatch >= patch;
-    }
-
-    private int parseVersionPart(String part) {
-        int end = 0;
-        while (end < part.length() && Character.isDigit(part.charAt(end))) {
-            end++;
-        }
-        return end == 0 ? 0 : Integer.parseInt(part.substring(0, end));
-    }
-
     private void setItemModelCompat(ItemMeta meta, String itemModel) {
-        if (!modernItemMetaApi) {
-            return;
-        }
-
-        NamespacedKey key = NamespacedKey.fromString(itemModel);
-        if (key != null) {
-            meta.setItemModel(key);
-        }
+        GuiItemMetaCompat.setItemModel(meta, itemModel);
     }
 
     private void setTooltipStyleCompat(ItemMeta meta, String tooltipStyle) {
-        if (!modernItemMetaApi) {
-            return;
-        }
-
-        NamespacedKey key = NamespacedKey.fromString(tooltipStyle);
-        if (key != null) {
-            meta.setTooltipStyle(key);
-        }
+        GuiItemMetaCompat.setTooltipStyle(meta, tooltipStyle);
     }
 
     private void setGlowCompat(ItemMeta meta) {
-        if (modernItemMetaApi) {
-            meta.setEnchantmentGlintOverride(true);
-        }
+        GuiItemMetaCompat.setGlow(meta);
     }
 
     private CustomMenu defaultEditMenu() {

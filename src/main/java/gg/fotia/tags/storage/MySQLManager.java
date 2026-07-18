@@ -448,14 +448,19 @@ public class MySQLManager implements DatabaseManager {
     public CompletableFuture<Void> deleteCustomTag(UUID uuid, String customTagId) {
         return CompletableFuture.runAsync(() -> {
             synchronized (lock) {
+            boolean autoCommit = true;
             try {
                 ensureConnection();
+                autoCommit = connection.getAutoCommit();
+                connection.setAutoCommit(false);
 
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "DELETE FROM fotiatags_custom_tags WHERE uuid = ? AND custom_tag_id = ?")) {
                     stmt.setString(1, uuid.toString());
                     stmt.setString(2, customTagId);
-                    stmt.executeUpdate();
+                    if (stmt.executeUpdate() == 0) {
+                        throw new SQLException("Custom tag does not exist: " + customTagId);
+                    }
                 }
 
                 try (PreparedStatement stmt = connection.prepareStatement(
@@ -464,9 +469,25 @@ public class MySQLManager implements DatabaseManager {
                     stmt.setString(2, customTagId);
                     stmt.executeUpdate();
                 }
+                connection.commit();
             } catch (SQLException e) {
+                if (connection != null) {
+                    try {
+                        connection.rollback();
+                    } catch (SQLException rollbackException) {
+                        e.addSuppressed(rollbackException);
+                    }
+                }
                 plugin.getLogger().severe("Failed to delete custom tag: " + e.getMessage());
                 throw new CompletionException(e);
+            } finally {
+                if (connection != null) {
+                    try {
+                        connection.setAutoCommit(autoCommit);
+                    } catch (SQLException restoreException) {
+                        plugin.getLogger().severe("Failed to restore MySQL auto-commit: " + restoreException.getMessage());
+                    }
+                }
             }
             }
         }, executor);
@@ -476,8 +497,11 @@ public class MySQLManager implements DatabaseManager {
     public CompletableFuture<Void> deleteCustomTag(UUID uuid) {
         return CompletableFuture.runAsync(() -> {
             synchronized (lock) {
+            boolean autoCommit = true;
             try {
                 ensureConnection();
+                autoCommit = connection.getAutoCommit();
+                connection.setAutoCommit(false);
 
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "DELETE FROM fotiatags_custom_tags WHERE uuid = ?")) {
@@ -491,9 +515,25 @@ public class MySQLManager implements DatabaseManager {
                     stmt.setString(2, TagManager.CUSTOM_TAG_ID);
                     stmt.executeUpdate();
                 }
+                connection.commit();
             } catch (SQLException e) {
+                if (connection != null) {
+                    try {
+                        connection.rollback();
+                    } catch (SQLException rollbackException) {
+                        e.addSuppressed(rollbackException);
+                    }
+                }
                 plugin.getLogger().severe("Failed to delete custom tag: " + e.getMessage());
                 throw new CompletionException(e);
+            } finally {
+                if (connection != null) {
+                    try {
+                        connection.setAutoCommit(autoCommit);
+                    } catch (SQLException restoreException) {
+                        plugin.getLogger().severe("Failed to restore MySQL auto-commit: " + restoreException.getMessage());
+                    }
+                }
             }
             }
         }, executor);

@@ -8,6 +8,9 @@ softdepend:
   - PlaceholderAPI
   - Vault
   - PlayerPoints
+libraries:
+  - org.xerial:sqlite-jdbc:3.45.3.0
+  - com.mysql:mysql-connector-j:8.4.0
 
 commands:
   fotiatags:

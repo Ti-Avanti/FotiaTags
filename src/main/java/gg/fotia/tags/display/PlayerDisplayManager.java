@@ -2,9 +2,9 @@ package gg.fotia.tags.display;
 
 import gg.fotia.tags.FotiaTags;
 import gg.fotia.tags.util.LegacyColorConverter;
+import gg.fotia.tags.util.TextComponentParser;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -27,7 +27,6 @@ public class PlayerDisplayManager implements Listener {
     private static final String DEFAULT_CHAT_FORMAT = "<!i>{prefix}{name}{suffix}<gray>: <white>{message}";
 
     private final FotiaTags plugin;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Map<UUID, DisplaySnapshot> snapshots = new ConcurrentHashMap<>();
     private DisplaySettings settings = DisplaySettings.disabled();
 
@@ -183,12 +182,7 @@ public class PlayerDisplayManager implements Listener {
     }
 
     private Component parseText(String text) {
-        try {
-            return miniMessage.deserialize("<!i>" + LegacyColorConverter.convertToMiniMessage(text));
-        } catch (RuntimeException e) {
-            plugin.getLogger().warning("Invalid player display format: " + e.getMessage());
-            return Component.text(text);
-        }
+        return TextComponentParser.parse(text);
     }
 
     private NameTagParts splitNameTagFormat(String format) {
