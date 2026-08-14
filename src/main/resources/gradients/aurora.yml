@@ -1,0 +1,25 @@
+# 此模板关闭购买，只能由管理员使用 /ft effect give 发放
+enabled: true
+display-name: "&d极光幻彩"
+colors:
+  - "#FF4FD8"
+  - "#6C63FF"
+  - "#38F9D7"
+duration-ticks: 120
+reverse: false
+apply-to:
+  - prefix
+  - suffix
+
+purchase:
+  enabled: false
+  provider: vault
+  price: 0
+  duration: permanent
+
+gui:
+  material: AMETHYST_SHARD
+  custom-model-data: 0
+  item-model: ""
+  tooltip-style: ""
+  glow: true

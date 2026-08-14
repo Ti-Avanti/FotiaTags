@@ -23,6 +23,12 @@ public interface DatabaseManager {
 
     CompletableFuture<Void> setSelectedTag(UUID uuid, String tagId);
 
+    CompletableFuture<Void> grantGradientEffect(UUID uuid, String effectId, long expireTime);
+
+    CompletableFuture<Void> removeGradientEffect(UUID uuid, String effectId);
+
+    CompletableFuture<Void> setSelectedGradientEffect(UUID uuid, String effectId);
+
     CompletableFuture<Void> saveCustomTag(UUID uuid, CustomTag customTag);
 
     CompletableFuture<Void> deleteCustomTag(UUID uuid);

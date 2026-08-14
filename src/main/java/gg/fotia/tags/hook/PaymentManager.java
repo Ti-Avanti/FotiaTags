@@ -99,6 +99,11 @@ public class PaymentManager {
         };
     }
 
+    public PaymentSnapshot createSnapshot(String provider, double amount) {
+        String normalized = provider == null ? "" : provider.toLowerCase();
+        return new PaymentSnapshot(normalized, Math.max(0.0, amount));
+    }
+
     public boolean refund(Player player, String provider, double amount) {
         if (amount <= 0) {
             return true;

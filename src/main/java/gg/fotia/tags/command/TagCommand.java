@@ -2,6 +2,7 @@ package gg.fotia.tags.command;
 
 import gg.fotia.tags.FotiaTags;
 import gg.fotia.tags.core.MessageManager;
+import gg.fotia.tags.gradient.GradientCommandHandler;
 import gg.fotia.tags.storage.PlayerProfile;
 import gg.fotia.tags.tag.PlayerTagData;
 import gg.fotia.tags.tag.Tag;
@@ -28,9 +29,11 @@ import java.util.stream.Collectors;
 public class TagCommand implements CommandExecutor, TabCompleter {
 
     private final FotiaTags plugin;
+    private final GradientCommandHandler gradientCommands;
 
     public TagCommand(FotiaTags plugin) {
         this.plugin = plugin;
+        this.gradientCommands = new GradientCommandHandler(plugin);
     }
 
     @Override
@@ -61,6 +64,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             case "editor" -> handleEditor(sender);
             case "player" -> handlePlayer(sender, args);
             case "players" -> handlePlayers(sender);
+            case "effects" -> gradientCommands.handleMenus(sender, args);
+            case "effect" -> gradientCommands.handleAdmin(sender, args);
             case "help" -> sendHelp(sender);
             default -> sendHelp(sender);
         }
@@ -646,6 +651,12 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             }
             plugin.getMessageManager().send(p, "help-list");
             plugin.getMessageManager().send(p, "help-menu");
+            if (p.hasPermission("fotiatags.effects")) {
+                plugin.getMessageManager().send(p, "help-effects");
+            }
+            if (p.hasPermission("fotiatags.admin.effect")) {
+                plugin.getMessageManager().send(p, "help-effect-admin");
+            }
             if (p.hasPermission("fotiatags.custom")) {
                 plugin.getMessageManager().send(p, "help-custom");
             }
@@ -676,6 +687,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             List<String> subCommands = new ArrayList<>();
             subCommands.add("menu");
             subCommands.add("list");
+            if (sender.hasPermission("fotiatags.effects")) subCommands.add("effects");
+            if (sender.hasPermission("fotiatags.admin.effect")) subCommands.add("effect");
             if (sender.hasPermission("fotiatags.custom")) subCommands.add("custom");
             if (sender.hasPermission("fotiatags.admin.give")) subCommands.add("give");
             if (sender.hasPermission("fotiatags.admin.remove")) subCommands.add("remove");
@@ -693,6 +706,11 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             return subCommands.stream()
                     .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
+        }
+
+        List<String> gradientCompletions = gradientCommands.tabComplete(sender, args);
+        if (gradientCompletions != null) {
+            return gradientCompletions;
         }
 
         if (args.length == 2) {

@@ -1,0 +1,25 @@
+# 动态渐变模板 ID 为文件名 ocean
+enabled: true
+display-name: "&b潮汐流光"
+colors:
+  - "&#00E5FF"
+  - "#0066FF"
+  - "#7C4DFF"
+duration-ticks: 100
+reverse: true
+apply-to:
+  - prefix
+  - suffix
+
+purchase:
+  enabled: true
+  provider: playerpoints
+  price: 300
+  duration: 30d
+
+gui:
+  material: HEART_OF_THE_SEA
+  custom-model-data: 0
+  item-model: ""
+  tooltip-style: ""
+  glow: true

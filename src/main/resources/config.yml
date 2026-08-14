@@ -154,5 +154,16 @@ custom-tags:
       item-model: ""
       tooltip-style: ""
 
+# 动态渐变称号效果
+# 动态效果是独立资产，玩家可在 /ft effects 中选择已拥有的效果。
+# 选择后会作用于当前普通称号或自定义称号，切换称号不会取消动态效果。
+dynamic-gradients:
+  # 总开关；关闭后停止刷新，也无法打开效果仓库和商店
+  enabled: false
+  # 动画刷新间隔，单位 tick；数值越小越流畅，但刷新开销越高
+  update-interval-ticks: 4
+  # GUI 中用于展示动画效果的预览文字
+  preview-text: "[动态称号]"
+
 # 调试模式
 debug: false

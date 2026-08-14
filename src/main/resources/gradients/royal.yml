@@ -1,0 +1,32 @@
+# 动态渐变模板 ID 为文件名 royal
+enabled: true
+display-name: "&6皇室流光"
+
+# 至少填写两个颜色，支持 #RRGGBB、&#RRGGBB 和 MiniMessage 命名颜色
+colors:
+  - "#FFD700"
+  - "#FF6B00"
+  - "#FFF2A8"
+
+# 完成一次正向动画所需 tick；reverse 为 true 时反转起始方向
+duration-ticks: 80
+reverse: false
+
+# 可选 prefix、suffix，也可同时填写
+apply-to:
+  - prefix
+  - suffix
+
+purchase:
+  enabled: true
+  provider: vault
+  price: 10000.0
+  # permanent 或 30m、1h、7d 等格式
+  duration: permanent
+
+gui:
+  material: GOLD_INGOT
+  custom-model-data: 0
+  item-model: ""
+  tooltip-style: ""
+  glow: true

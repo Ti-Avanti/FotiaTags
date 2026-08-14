@@ -8,7 +8,9 @@
 # - permission: 权限节点（可选）
 # - material: GUI物品材质（默认PAPER）
 # - item-model: 物品模型（1.21+，可选）
+# - tooltip-style: 提示样式（1.21+，可选）
 # - custom-model-data: 自定义模型数据（可选）
+# - particle: 绑定的粒子模板ID，留空则不播放粒子（可选）
 
 tags:
   admin:

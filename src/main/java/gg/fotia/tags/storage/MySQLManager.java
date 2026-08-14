@@ -60,6 +60,7 @@ public class MySQLManager implements DatabaseManager {
                     uuid VARCHAR(36) PRIMARY KEY,
                     player_name VARCHAR(16),
                     current_tag VARCHAR(64),
+                    current_gradient VARCHAR(64),
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
             """);
@@ -72,6 +73,16 @@ public class MySQLManager implements DatabaseManager {
                     expire_time BIGINT DEFAULT -1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE KEY unique_player_tag (uuid, tag_id)
+                )
+            """);
+
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS fotiatags_gradient_owned (
+                    uuid VARCHAR(36) NOT NULL,
+                    effect_id VARCHAR(64) NOT NULL,
+                    expire_time BIGINT DEFAULT -1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (uuid, effect_id)
                 )
             """);
 
@@ -151,6 +162,7 @@ public class MySQLManager implements DatabaseManager {
 
     private void addMissingPlayerColumns() throws SQLException {
         addColumnIfMissing("fotiatags_players", "player_name", "VARCHAR(16)");
+        addColumnIfMissing("fotiatags_players", "current_gradient", "VARCHAR(64)");
     }
 
     private boolean tableExists(String table) throws SQLException {
@@ -213,11 +225,12 @@ public class MySQLManager implements DatabaseManager {
 
                 // 加载当前称号
                 try (PreparedStatement stmt = connection.prepareStatement(
-                        "SELECT current_tag FROM fotiatags_players WHERE uuid = ?")) {
+                        "SELECT current_tag, current_gradient FROM fotiatags_players WHERE uuid = ?")) {
                     stmt.setString(1, uuid.toString());
                     ResultSet rs = stmt.executeQuery();
                     if (rs.next()) {
                         data.setCurrentTag(rs.getString("current_tag"));
+                        data.getGradientData().setSelectedEffectUnchecked(rs.getString("current_gradient"));
                     }
                 }
 
@@ -228,6 +241,15 @@ public class MySQLManager implements DatabaseManager {
                     ResultSet rs = stmt.executeQuery();
                     while (rs.next()) {
                         data.addTag(rs.getString("tag_id"), rs.getLong("expire_time"));
+                    }
+                }
+
+                try (PreparedStatement stmt = connection.prepareStatement(
+                        "SELECT effect_id, expire_time FROM fotiatags_gradient_owned WHERE uuid = ?")) {
+                    stmt.setString(1, uuid.toString());
+                    ResultSet rs = stmt.executeQuery();
+                    while (rs.next()) {
+                        data.getGradientData().grant(rs.getString("effect_id"), rs.getLong("expire_time"));
                     }
                 }
 
@@ -266,6 +288,8 @@ public class MySQLManager implements DatabaseManager {
         UUID uuid = data.getUuid();
         String currentTag = data.getCurrentTag();
         Map<String, Long> ownedTags = new HashMap<>(data.getOwnedTags());
+        String currentGradient = data.getGradientData().selectedEffect(System.currentTimeMillis());
+        Map<String, Long> ownedGradients = new HashMap<>(data.getGradientData().ownedEffects());
 
         return CompletableFuture.runAsync(() -> {
             synchronized (lock) {
@@ -276,10 +300,12 @@ public class MySQLManager implements DatabaseManager {
 
                 // 保存当前称号
                 try (PreparedStatement stmt = connection.prepareStatement(
-                        "INSERT INTO fotiatags_players (uuid, current_tag) VALUES (?, ?) " +
-                                "ON DUPLICATE KEY UPDATE current_tag = VALUES(current_tag)")) {
+                        "INSERT INTO fotiatags_players (uuid, current_tag, current_gradient) VALUES (?, ?, ?) " +
+                                "ON DUPLICATE KEY UPDATE current_tag = VALUES(current_tag), " +
+                                "current_gradient = VALUES(current_gradient)")) {
                     stmt.setString(1, uuid.toString());
                     stmt.setString(2, currentTag);
+                    stmt.setString(3, currentGradient);
                     stmt.executeUpdate();
                 }
 
@@ -294,6 +320,23 @@ public class MySQLManager implements DatabaseManager {
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "INSERT INTO fotiatags_owned (uuid, tag_id, expire_time) VALUES (?, ?, ?)")) {
                     for (var entry : ownedTags.entrySet()) {
+                        stmt.setString(1, uuid.toString());
+                        stmt.setString(2, entry.getKey());
+                        stmt.setLong(3, entry.getValue());
+                        stmt.addBatch();
+                    }
+                    stmt.executeBatch();
+                }
+
+                try (PreparedStatement stmt = connection.prepareStatement(
+                        "DELETE FROM fotiatags_gradient_owned WHERE uuid = ?")) {
+                    stmt.setString(1, uuid.toString());
+                    stmt.executeUpdate();
+                }
+
+                try (PreparedStatement stmt = connection.prepareStatement(
+                        "INSERT INTO fotiatags_gradient_owned (uuid, effect_id, expire_time) VALUES (?, ?, ?)")) {
+                    for (var entry : ownedGradients.entrySet()) {
                         stmt.setString(1, uuid.toString());
                         stmt.setString(2, entry.getKey());
                         stmt.setLong(3, entry.getValue());
@@ -394,6 +437,94 @@ public class MySQLManager implements DatabaseManager {
                 }
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to set selected tag: " + e.getMessage());
+                throw new CompletionException(e);
+            }
+            }
+        }, executor);
+    }
+
+    @Override
+    public CompletableFuture<Void> grantGradientEffect(UUID uuid, String effectId, long expireTime) {
+        return CompletableFuture.runAsync(() -> {
+            synchronized (lock) {
+            try {
+                ensureConnection();
+                try (PreparedStatement player = connection.prepareStatement(
+                        "INSERT IGNORE INTO fotiatags_players (uuid) VALUES (?)");
+                     PreparedStatement effect = connection.prepareStatement(
+                             "INSERT INTO fotiatags_gradient_owned (uuid, effect_id, expire_time) VALUES (?, ?, ?) " +
+                                     "ON DUPLICATE KEY UPDATE expire_time = VALUES(expire_time)")) {
+                    player.setString(1, uuid.toString());
+                    player.executeUpdate();
+                    effect.setString(1, uuid.toString());
+                    effect.setString(2, effectId);
+                    effect.setLong(3, expireTime);
+                    effect.executeUpdate();
+                }
+            } catch (SQLException e) {
+                throw new CompletionException(e);
+            }
+            }
+        }, executor);
+    }
+
+    @Override
+    public CompletableFuture<Void> removeGradientEffect(UUID uuid, String effectId) {
+        return CompletableFuture.runAsync(() -> {
+            synchronized (lock) {
+            boolean autoCommit = true;
+            try {
+                ensureConnection();
+                autoCommit = connection.getAutoCommit();
+                connection.setAutoCommit(false);
+                try (PreparedStatement effect = connection.prepareStatement(
+                        "DELETE FROM fotiatags_gradient_owned WHERE uuid = ? AND effect_id = ?");
+                     PreparedStatement selected = connection.prepareStatement(
+                             "UPDATE fotiatags_players SET current_gradient = NULL WHERE uuid = ? AND current_gradient = ?")) {
+                    effect.setString(1, uuid.toString());
+                    effect.setString(2, effectId);
+                    effect.executeUpdate();
+                    selected.setString(1, uuid.toString());
+                    selected.setString(2, effectId);
+                    selected.executeUpdate();
+                }
+                connection.commit();
+            } catch (SQLException e) {
+                if (connection != null) {
+                    try {
+                        connection.rollback();
+                    } catch (SQLException rollbackException) {
+                        e.addSuppressed(rollbackException);
+                    }
+                }
+                throw new CompletionException(e);
+            } finally {
+                if (connection != null) {
+                    try {
+                        connection.setAutoCommit(autoCommit);
+                    } catch (SQLException restoreException) {
+                        plugin.getLogger().severe("Failed to restore MySQL auto-commit: " + restoreException.getMessage());
+                    }
+                }
+            }
+            }
+        }, executor);
+    }
+
+    @Override
+    public CompletableFuture<Void> setSelectedGradientEffect(UUID uuid, String effectId) {
+        return CompletableFuture.runAsync(() -> {
+            synchronized (lock) {
+            try {
+                ensureConnection();
+                try (PreparedStatement stmt = connection.prepareStatement(
+                        "INSERT INTO fotiatags_players (uuid, current_gradient) VALUES (?, ?) " +
+                                "ON DUPLICATE KEY UPDATE current_gradient = VALUES(current_gradient)")) {
+                    stmt.setString(1, uuid.toString());
+                    stmt.setString(2, effectId);
+                    stmt.executeUpdate();
+                }
+            } catch (SQLException e) {
                 throw new CompletionException(e);
             }
             }

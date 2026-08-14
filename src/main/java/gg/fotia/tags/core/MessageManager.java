@@ -95,6 +95,10 @@ public class MessageManager {
         sender.sendMessage(get(key));
     }
 
+    public void send(org.bukkit.command.CommandSender sender, String key, Map<String, String> placeholders) {
+        sender.sendMessage(get(key, placeholders));
+    }
+
     public void send(org.bukkit.command.CommandSender sender, String key, String... args) {
         sender.sendMessage(get(key, of(args)));
     }

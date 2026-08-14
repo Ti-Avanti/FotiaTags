@@ -1,6 +1,7 @@
 package gg.fotia.tags.hook;
 
 import gg.fotia.tags.FotiaTags;
+import gg.fotia.tags.gradient.GradientTarget;
 import gg.fotia.tags.util.LegacyColorConverter;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
@@ -42,10 +43,14 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
         }
 
         String result = switch (params.toLowerCase()) {
-            case "prefix" -> plugin.getTagManager().getCurrentPrefix(player.getUniqueId());
-            case "suffix" -> plugin.getTagManager().getCurrentSuffix(player.getUniqueId());
-            case "prefix2" -> plugin.getTagManager().getCurrentPrefix2(player.getUniqueId());
-            case "suffix2" -> plugin.getTagManager().getCurrentSuffix2(player.getUniqueId());
+            case "prefix" -> plugin.getGradientManager().render(player.getUniqueId(),
+                    plugin.getTagManager().getCurrentPrefix(player.getUniqueId()), GradientTarget.PREFIX);
+            case "suffix" -> plugin.getGradientManager().render(player.getUniqueId(),
+                    plugin.getTagManager().getCurrentSuffix(player.getUniqueId()), GradientTarget.SUFFIX);
+            case "prefix2" -> plugin.getGradientManager().render(player.getUniqueId(),
+                    plugin.getTagManager().getCurrentPrefix2(player.getUniqueId()), GradientTarget.PREFIX);
+            case "suffix2" -> plugin.getGradientManager().render(player.getUniqueId(),
+                    plugin.getTagManager().getCurrentSuffix2(player.getUniqueId()), GradientTarget.SUFFIX);
             case "tag" -> plugin.getTagManager().getCurrentTagId(player.getUniqueId());
             case "tag_name" -> plugin.getTagManager().getCurrentTagName(player.getUniqueId());
             case "count" -> String.valueOf(plugin.getTagManager().getOwnedTagCount(player.getUniqueId()));

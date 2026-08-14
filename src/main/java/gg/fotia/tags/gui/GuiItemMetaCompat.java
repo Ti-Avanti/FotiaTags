@@ -7,7 +7,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.meta.ItemMeta;
 
-final class GuiItemMetaCompat {
+public final class GuiItemMetaCompat {
 
     private static final boolean MODERN_ITEM_META =
             MinecraftVersion.isAtLeast(Bukkit.getBukkitVersion(), 1, 21, 4);
@@ -15,7 +15,7 @@ final class GuiItemMetaCompat {
     private GuiItemMetaCompat() {
     }
 
-    static void setItemModel(ItemMeta meta, String itemModel) {
+    public static void setItemModel(ItemMeta meta, String itemModel) {
         if (!MODERN_ITEM_META) {
             return;
         }
@@ -25,7 +25,7 @@ final class GuiItemMetaCompat {
         }
     }
 
-    static void setTooltipStyle(ItemMeta meta, String tooltipStyle) {
+    public static void setTooltipStyle(ItemMeta meta, String tooltipStyle) {
         if (!MODERN_ITEM_META) {
             return;
         }
@@ -35,7 +35,7 @@ final class GuiItemMetaCompat {
         }
     }
 
-    static void setGlow(ItemMeta meta) {
+    public static void setGlow(ItemMeta meta) {
         if (MODERN_ITEM_META) {
             meta.setEnchantmentGlintOverride(true);
             return;

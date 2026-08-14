@@ -1,5 +1,7 @@
 package gg.fotia.tags.tag;
 
+import gg.fotia.tags.gradient.PlayerGradientData;
+
 import java.util.*;
 
 public class PlayerTagData {
@@ -9,12 +11,14 @@ public class PlayerTagData {
     private CustomTag customTag;
     private final Map<String, CustomTag> customTags;
     private final Map<String, Long> ownedTags; // tagId -> expireTime (-1 = permanent)
+    private final PlayerGradientData gradientData;
 
     public PlayerTagData(UUID uuid) {
         this.uuid = uuid;
         this.currentTag = null;
         this.customTags = new LinkedHashMap<>();
         this.ownedTags = new HashMap<>();
+        this.gradientData = new PlayerGradientData();
     }
 
     public UUID getUuid() {
@@ -91,6 +95,10 @@ public class PlayerTagData {
 
     public Map<String, Long> getOwnedTags() {
         return ownedTags;
+    }
+
+    public PlayerGradientData getGradientData() {
+        return gradientData;
     }
 
     public boolean hasTag(String tagId) {

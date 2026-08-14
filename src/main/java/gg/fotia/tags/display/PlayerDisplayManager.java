@@ -1,6 +1,7 @@
 package gg.fotia.tags.display;
 
 import gg.fotia.tags.FotiaTags;
+import gg.fotia.tags.gradient.GradientTarget;
 import gg.fotia.tags.util.LegacyColorConverter;
 import gg.fotia.tags.util.TextComponentParser;
 import io.papermc.paper.event.player.AsyncChatEvent;
@@ -266,12 +267,16 @@ public class PlayerDisplayManager implements Listener {
     ) {
         private static DisplaySnapshot from(FotiaTags plugin, Player player) {
             UUID uuid = player.getUniqueId();
+            String prefix = plugin.getTagManager().getCurrentPrefix(uuid);
+            String suffix = plugin.getTagManager().getCurrentSuffix(uuid);
+            String prefix2 = plugin.getTagManager().getCurrentPrefix2(uuid);
+            String suffix2 = plugin.getTagManager().getCurrentSuffix2(uuid);
             return new DisplaySnapshot(
                     player.getName(),
-                    plugin.getTagManager().getCurrentPrefix(uuid),
-                    plugin.getTagManager().getCurrentSuffix(uuid),
-                    plugin.getTagManager().getCurrentPrefix2(uuid),
-                    plugin.getTagManager().getCurrentSuffix2(uuid),
+                    plugin.getGradientManager().render(uuid, prefix, GradientTarget.PREFIX),
+                    plugin.getGradientManager().render(uuid, suffix, GradientTarget.SUFFIX),
+                    plugin.getGradientManager().render(uuid, prefix2, GradientTarget.PREFIX),
+                    plugin.getGradientManager().render(uuid, suffix2, GradientTarget.SUFFIX),
                     plugin.getTagManager().getCurrentTagId(uuid),
                     plugin.getTagManager().getCurrentTagName(uuid)
             );

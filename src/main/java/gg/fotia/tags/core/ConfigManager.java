@@ -47,6 +47,12 @@ public class ConfigManager {
             particlesFolder.mkdirs();
         }
 
+        // 确保动态渐变模板文件夹存在
+        File gradientsFolder = new File(plugin.getDataFolder(), "gradients");
+        if (!gradientsFolder.exists()) {
+            gradientsFolder.mkdirs();
+        }
+
         // 保存默认语言文件
         saveDefaultResource("lang/zh_CN.yml");
         saveDefaultResource("lang/en_US.yml");
@@ -63,12 +69,20 @@ public class ConfigManager {
         saveDefaultResource("menus/tag-editor-particles.yml");
         saveDefaultResource("menus/player-manager-list.yml");
         saveDefaultResource("menus/player-manager-tags.yml");
+        saveDefaultResource("menus/gradient-storage.yml");
+        saveDefaultResource("menus/gradient-shop.yml");
+        saveDefaultResource("menus/gradient-purchase-confirm.yml");
 
         // 保存默认粒子模板
         saveDefaultResource("particles/halo.yml");
         saveDefaultResource("particles/trail.yml");
         saveDefaultResource("particles/feet.yml");
         saveDefaultResource("particles/burst.yml");
+
+        // 保存默认动态渐变模板
+        saveDefaultResource("gradients/royal.yml");
+        saveDefaultResource("gradients/ocean.yml");
+        saveDefaultResource("gradients/aurora.yml");
     }
 
     private FileConfiguration loadConfig(String fileName) {

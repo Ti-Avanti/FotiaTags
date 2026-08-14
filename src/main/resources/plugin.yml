@@ -55,3 +55,9 @@ permissions:
   fotiatags.custom:
     description: 使用自定义称号功能
     default: true
+  fotiatags.effects:
+    description: 使用动态效果仓库和商店
+    default: true
+  fotiatags.admin.effect:
+    description: 管理玩家的动态称号效果
+    default: op

@@ -19,6 +19,151 @@ settings:
   language: zh_CN
   # 过期检查间隔（秒）
   expire-check-interval: 60
+  # MySQL跨服数据同步间隔（秒），仅database.type为mysql时生效，0表示关闭
+  cross-server-sync-interval: 60
+
+# 玩家显示功能
+# 开启后可以把当前称号直接显示到玩家头顶名牌、Tab列表名字和聊天格式中。
+player-display:
+  # 总开关，默认关闭，避免和服务器已有的聊天/名牌/Tab插件冲突
+  enabled: false
+
+  # 可用变量:
+  # {name} 或 {player} = 玩家原名
+  # {prefix} = 当前称号前缀（MiniMessage或旧版颜色代码均可）
+  # {suffix} = 当前称号后缀（MiniMessage或旧版颜色代码均可）
+  # {prefix2} = 当前称号前缀2
+  # {suffix2} = 当前称号后缀2
+  # {tag} = 当前称号ID
+  # {tag_name} = 当前称号显示名
+
+  # 头顶名牌设置
+  name-tag:
+    # 是否启用头顶名牌显示
+    enabled: true
+    # 是否直接修改玩家头顶NameTag；开启后使用计分板Team，可能会和其他名牌/队伍插件冲突
+    direct: true
+    # 头顶名牌需要保留{name}或{player}，变量可放在名字前后
+    format: "<!i>{prefix}{name}{suffix}"
+
+  # Tab列表名字设置
+  tab:
+    enabled: true
+    format: "<!i>{prefix}{name}{suffix}"
+
+  # 聊天格式设置
+  chat:
+    enabled: true
+    # {message} = 玩家发送的聊天内容
+    format: "<!i>{prefix}{name}{suffix}<gray>: <white>{message}"
+
+# 称号粒子效果
+particles:
+  # 总开关，关闭后不会播放任何称号粒子
+  enabled: false
+  # 粒子只发送给附近玩家，避免全服广播粒子包
+  only-visible-to-nearby: true
+  # 可见距离，单位为方块
+  view-distance: 24
+  # 单个玩家每次最多生成的粒子数量，避免模板配置过高影响性能
+  max-per-player-amount: 12
+
+# 自定义称号功能
+# 玩家先设置前缀、后缀和图标，最后确认购买时才扣费并写入数据库。
+custom-tags:
+  # 单个玩家最多可购买几个自定义称号，-1 表示不限制
+  max-owned: -1
+
+  # 总开关，关闭后玩家不能购买，自定义称号也不会显示在称号仓库
+  enabled: false
+  # 自定义称号在称号仓库和提示中的显示名
+  display-name: "自定义称号"
+
+  content:
+    # 新建自定义称号时默认选中的图标 ID
+    default-icon: nametag
+
+  editable-parts:
+    # 是否允许玩家设置自定义称号前缀
+    prefix: true
+    # 是否允许玩家设置自定义称号后缀
+    suffix: true
+
+  display-wrapper:
+    # 是否在展示自定义称号时自动包裹左右符号
+    enabled: true
+    # 左侧包裹符号，支持 &、§ 和 MiniMessage 颜色
+    left: "["
+    # 右侧包裹符号，支持 &、§ 和 MiniMessage 颜色
+    right: "]"
+
+  purchase:
+    # 支付方式: vault 或 playerpoints
+    provider: vault
+    # Vault 金币价格
+    vault-price: 10000.0
+    # PlayerPoints 点券价格
+    playerpoints-price: 500
+
+  delete:
+    # 是否允许玩家在称号仓库里删除自己的自定义称号
+    enabled: true
+    refund:
+      # 是否在玩家删除自定义称号时退款
+      enabled: false
+      # 退款比例，0 表示不退，100 表示全额退款
+      percent: 50
+
+  filter:
+    # 是否启用自定义称号违禁词过滤
+    enabled: true
+    # 是否忽略大小写
+    ignore-case: true
+    # 检查前是否移除 &、§、&#RRGGBB、§x§R§R§G§G§B§B 颜色代码
+    strip-colors-before-check: true
+    # 检查前是否移除 MiniMessage 标签
+    strip-minimessage-before-check: true
+    # 普通违禁词，使用包含匹配
+    blocked-words:
+      - "违禁词"
+    # 正则违禁词，写错的正则会被忽略
+    blocked-regex: []
+
+  limits:
+    # 前缀最大字符数
+    max-prefix-length: 16
+    # 后缀最大字符数
+    max-suffix-length: 16
+    # 是否允许 & 和 § 旧版颜色代码
+    allow-colors: true
+    # 是否允许 MiniMessage 标签
+    allow-minimessage: false
+
+  # 玩家可选择的图标白名单
+  icons:
+    nametag:
+      name: "<yellow><!i>名牌"
+      material: NAME_TAG
+      custom-model-data: 0
+      item-model: ""
+      tooltip-style: ""
+    diamond:
+      name: "<aqua><!i>钻石"
+      material: DIAMOND
+      custom-model-data: 0
+      item-model: ""
+      tooltip-style: ""
+
+# 动态渐变称号效果
+# 动态效果是独立资产，玩家可在 /ft effects 中选择已拥有的效果。
+# 选择后会作用于当前普通称号或自定义称号，切换称号不会取消动态效果。
+dynamic-gradients:
+  # 总开关；关闭后停止刷新，也无法打开效果仓库和商店
+  enabled: false
+  # 动画刷新间隔，单位 tick；数值越小越流畅，但刷新开销越高
+  update-interval-ticks: 4
+  # GUI 中用于展示动画效果的预览文字
+  preview-text: "[动态称号]"
 
 # 调试模式
 debug: false

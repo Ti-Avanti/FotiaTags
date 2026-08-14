@@ -8,6 +8,8 @@ import gg.fotia.tags.gui.CustomTagManager;
 import gg.fotia.tags.gui.MenuManager;
 import gg.fotia.tags.gui.PlayerTagAdminManager;
 import gg.fotia.tags.gui.TagEditorManager;
+import gg.fotia.tags.gradient.GradientManager;
+import gg.fotia.tags.gradient.gui.GradientMenuManager;
 import gg.fotia.tags.hook.PaymentManager;
 import gg.fotia.tags.hook.PlaceholderAPIHook;
 import gg.fotia.tags.particle.ParticleManager;
@@ -25,6 +27,8 @@ public class FotiaTags extends JavaPlugin {
     private MessageManager messageManager;
     private DatabaseManager databaseManager;
     private TagManager tagManager;
+    private GradientManager gradientManager;
+    private GradientMenuManager gradientMenuManager;
     private PlayerDisplayManager playerDisplayManager;
     private PaymentManager paymentManager;
     private CustomTagManager customTagManager;
@@ -53,12 +57,16 @@ public class FotiaTags extends JavaPlugin {
         this.particleManager.reload();
         this.tagManager.loadTags();
 
+        // 初始化动态渐变效果管理器
+        this.gradientManager = new GradientManager(this);
+
         // 初始化玩家显示管理器
         this.playerDisplayManager = new PlayerDisplayManager(this);
 
         // 初始化支付与自定义称号管理器
         this.paymentManager = new PaymentManager(this);
         this.customTagManager = new CustomTagManager(this);
+        this.gradientMenuManager = new GradientMenuManager(this);
 
         // 初始化菜单管理器
         this.menuManager = new MenuManager(this);
@@ -84,6 +92,10 @@ public class FotiaTags extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (gradientManager != null) {
+            gradientManager.shutdown();
+        }
+
         if (particleManager != null) {
             particleManager.shutdown();
         }
@@ -126,8 +138,10 @@ public class FotiaTags extends JavaPlugin {
         messageManager.reload();
         paymentManager.reload();
         customTagManager.reload();
+        gradientMenuManager.reload();
         particleManager.reload();
         tagManager.loadTags();
+        gradientManager.reload();
         playerDisplayManager.reload();
         menuManager.loadMenus();
         tagEditorManager.reload();
@@ -152,6 +166,14 @@ public class FotiaTags extends JavaPlugin {
 
     public TagManager getTagManager() {
         return tagManager;
+    }
+
+    public GradientManager getGradientManager() {
+        return gradientManager;
+    }
+
+    public GradientMenuManager getGradientMenuManager() {
+        return gradientMenuManager;
     }
 
     public PlayerDisplayManager getPlayerDisplayManager() {
