@@ -41,6 +41,8 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
         if (player == null) {
             return "";
         }
+        if (gg.fotia.basictool.bridge.PaperNickBridge.active("FotiaTags", player.getUniqueId())
+                && java.util.Set.of("prefix", "suffix", "prefix2", "suffix2", "tag", "tag_name").contains(params.toLowerCase(java.util.Locale.ROOT))) return "";
 
         String result = switch (params.toLowerCase()) {
             case "prefix" -> plugin.getGradientManager().render(player.getUniqueId(),

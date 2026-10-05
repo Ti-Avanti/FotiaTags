@@ -934,7 +934,7 @@ public class CustomTagManager implements Listener {
             return;
         }
         if (icon.customModelData() > 0) {
-            meta.setCustomModelData(icon.customModelData());
+            GuiItemMetaCompat.setCustomModelData(meta, icon.customModelData());
         }
         if (icon.itemModel() != null && !icon.itemModel().isEmpty()) {
             setItemModelCompat(meta, icon.itemModel());

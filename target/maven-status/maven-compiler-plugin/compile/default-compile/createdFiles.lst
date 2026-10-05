@@ -51,6 +51,7 @@ gg\fotia\tags\command\TagCommand.class
 gg\fotia\tags\gui\PlayerTagAdminManager$AdminMenu.class
 gg\fotia\tags\util\TextComponentParser.class
 gg\fotia\tags\gui\TagEditorManager$EditorSession.class
+gg\fotia\tags\util\SoundResolver.class
 gg\fotia\tags\gradient\GradientCommandHandler.class
 gg\fotia\tags\gradient\GradientTarget.class
 gg\fotia\tags\gui\CustomTagManager.class

@@ -288,7 +288,7 @@ public class MenuManager implements Listener {
         UUID uuid = player.getUniqueId();
         reopeningMenus.add(uuid);
         try {
-            openMenus.put(uuid, new MenuSession(menuType, page, customTag.getId()));
+            openMenus.put(uuid, new MenuSession(menuType, page, customTag.getId(), inventory));
             player.openInventory(inventory);
         } finally {
             reopeningMenus.remove(uuid);
@@ -563,7 +563,7 @@ public class MenuManager implements Listener {
         UUID uuid = player.getUniqueId();
         reopeningMenus.add(uuid);
         try {
-            openMenus.put(uuid, new MenuSession("tag-select", page, null));
+            openMenus.put(uuid, new MenuSession("tag-select", page, null, inventory));
             player.openInventory(inventory);
         } finally {
             reopeningMenus.remove(uuid);
@@ -680,7 +680,7 @@ public class MenuManager implements Listener {
 
         // 设置custom-model-data
         if (tag.getCustomModelData() > 0) {
-            meta.setCustomModelData(tag.getCustomModelData());
+            GuiItemMetaCompat.setCustomModelData(meta, tag.getCustomModelData());
         }
 
         String tooltipStyle = tag.getTooltipStyle();
@@ -736,7 +736,7 @@ public class MenuManager implements Listener {
 
         if (icon != null) {
             if (icon.customModelData() > 0) {
-                meta.setCustomModelData(icon.customModelData());
+                GuiItemMetaCompat.setCustomModelData(meta, icon.customModelData());
             }
             if (icon.itemModel() != null && !icon.itemModel().isEmpty()) {
                 setItemModelCompat(meta, icon.itemModel());
@@ -934,8 +934,9 @@ public class MenuManager implements Listener {
     }
 
     private void refreshTagItems(Player player, int page) {
-        Inventory inventory = player.getOpenInventory().getTopInventory();
-        if (inventory == null) return;
+        MenuSession session = openMenus.get(player.getUniqueId());
+        if (session == null) return;
+        Inventory inventory = session.inventory;
 
         PlayerTagData data = plugin.getTagManager().getPlayerData(player.getUniqueId());
         List<String> ownedTags = data != null ? data.getValidTags() : Collections.emptyList();
@@ -1004,10 +1005,12 @@ public class MenuManager implements Listener {
                 String sound = action.replace("[sound]", "").replace("sound:", "").trim();
                 try {
                     String[] parts = sound.split("-");
-                    org.bukkit.Sound soundEnum = org.bukkit.Sound.valueOf(parts[0].toUpperCase());
+                    org.bukkit.Sound soundEnum = gg.fotia.tags.util.SoundResolver.resolve(parts[0]);
                     float volume = parts.length > 1 ? Float.parseFloat(parts[1]) : 1.0f;
                     float pitch = parts.length > 2 ? Float.parseFloat(parts[2]) : 1.0f;
-                    player.playSound(player.getLocation(), soundEnum, volume, pitch);
+                    if (soundEnum != null) {
+                        player.playSound(player.getLocation(), soundEnum, volume, pitch);
+                    }
                 } catch (Exception ignored) {}
             } else if (action.equals("[close]") || action.equals("close")) {
                 player.closeInventory();
@@ -1072,11 +1075,13 @@ public class MenuManager implements Listener {
         String menuType;
         int page;
         String customTagId;
+        final Inventory inventory;
 
-        MenuSession(String menuType, int page, String customTagId) {
+        MenuSession(String menuType, int page, String customTagId, Inventory inventory) {
             this.menuType = menuType;
             this.page = page;
             this.customTagId = customTagId;
+            this.inventory = inventory;
         }
     }
 

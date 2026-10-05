@@ -6,14 +6,16 @@
 
     <groupId>gg.fotia</groupId>
     <artifactId>FotiaTags</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.2</version>
     <packaging>jar</packaging>
 
     <name>FotiaTags</name>
     <description>称号系统插件，支持跨服同步、多语言、GUI管理</description>
 
     <properties>
-        <java.version>21</java.version>
+        <!-- 构建使用 JDK 21+；Java 17 字节码兼容旧 Paper 1.20 的类转换器。 -->
+        <java.version>17</java.version>
+        <paper-api.version>1.21.4-R0.1-SNAPSHOT</paper-api.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.10.2</junit.version>
     </properties>
@@ -41,7 +43,7 @@
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.21.4-R0.1-SNAPSHOT</version>
+            <version>${paper-api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -100,6 +102,7 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+    <dependency><groupId>gg.fotia</groupId><artifactId>basictool-bridge</artifactId><version>1.0.0-SNAPSHOT</version><scope>provided</scope></dependency>
     </dependencies>
 
     <build>
@@ -116,8 +119,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
@@ -126,6 +128,29 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
             </plugin>
+        <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.8.1</version><executions><execution><id>basictool-optional-nick-bridge</id><phase>process-resources</phase><goals><goal>unpack</goal></goals><configuration><artifactItems><artifactItem><groupId>gg.fotia</groupId><artifactId>basictool-bridge</artifactId><version>1.0.0-SNAPSHOT</version><outputDirectory>${project.build.outputDirectory}</outputDirectory><includes>gg/fotia/basictool/bridge/**</includes><overWrite>true</overWrite></artifactItem></artifactItems></configuration></execution></executions></plugin>
         </plugins>
     </build>
+
+    <!-- 新版本 API 校验单独输出；默认发布包保留旧 API 和 Java 17 字节码。 -->
+    <profiles>
+        <profile>
+            <id>paper-26.2</id>
+            <properties>
+                <paper-api.version>26.2.build.129-stable</paper-api.version>
+            </properties>
+            <build>
+                <directory>${project.basedir}/target/compat/26.2</directory>
+            </build>
+        </profile>
+        <profile>
+            <id>paper-26.3</id>
+            <properties>
+                <paper-api.version>26.3.build.151-beta</paper-api.version>
+            </properties>
+            <build>
+                <directory>${project.basedir}/target/compat/26.3</directory>
+            </build>
+        </profile>
+    </profiles>
 </project>

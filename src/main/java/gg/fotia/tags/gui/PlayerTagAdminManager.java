@@ -531,7 +531,7 @@ public class PlayerTagAdminManager implements Listener {
         applyItem(meta, template, placeholders);
 
         if (entry.customModelData() > 0) {
-            meta.setCustomModelData(entry.customModelData());
+            GuiItemMetaCompat.setCustomModelData(meta, entry.customModelData());
         }
         String itemModel = entry.itemModel() != null && !entry.itemModel().isEmpty() ? entry.itemModel() : template.itemModel();
         if (itemModel != null && !itemModel.isEmpty()) {

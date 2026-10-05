@@ -76,6 +76,12 @@ public class PlayerDisplayManager implements Listener {
         }
 
         DisplaySnapshot snapshot = DisplaySnapshot.from(plugin, player);
+        if (gg.fotia.basictool.bridge.PaperNickBridge.active("FotiaTags", player.getUniqueId())) {
+            snapshots.put(player.getUniqueId(), DisplaySnapshot.basic(player));
+            clearNameTag(player);
+            player.playerListName(gg.fotia.basictool.bridge.PaperNickBridge.component("FotiaTags", player, player.displayName()));
+            return;
+        }
         snapshots.put(player.getUniqueId(), snapshot);
 
         applyNameTag(player, snapshot);
@@ -116,6 +122,14 @@ public class PlayerDisplayManager implements Listener {
 
     @EventHandler
     public void onAsyncChat(AsyncChatEvent event) {
+        if (gg.fotia.basictool.bridge.PaperNickBridge.active("FotiaTags", event.getPlayer().getUniqueId())) {
+            String anonymous = gg.fotia.basictool.bridge.PaperNickBridge.chatFormat("FotiaTags", event.getPlayer().getUniqueId(), "")
+                    .replace("{message}", "<nick_message>");
+            event.renderer((source, sourceName, message, viewer) -> net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    .deserialize("<!i>" + LegacyColorConverter.convertToMiniMessage(anonymous),
+                            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("nick_message", message)));
+            return;
+        }
         DisplaySettings currentSettings = this.settings;
         if (!currentSettings.enabled() || !currentSettings.chatEnabled()) {
             return;
@@ -283,7 +297,7 @@ public class PlayerDisplayManager implements Listener {
         }
 
         private static DisplaySnapshot basic(Player player) {
-            return new DisplaySnapshot(player.getName(), "", "", "", "", "", "");
+            return new DisplaySnapshot(gg.fotia.basictool.bridge.PaperNickBridge.name("FotiaTags", player), "", "", "", "", "", "");
         }
 
         private String apply(String format) {

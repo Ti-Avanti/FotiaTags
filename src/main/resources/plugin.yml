@@ -5,6 +5,7 @@ api-version: '1.20'
 author: Fotia
 description: 称号系统插件，支持跨服同步、多语言、GUI管理
 softdepend:
+  - BasicTool
   - PlaceholderAPI
   - Vault
   - PlayerPoints

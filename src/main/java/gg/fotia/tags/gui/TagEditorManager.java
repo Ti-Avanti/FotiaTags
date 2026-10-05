@@ -441,7 +441,7 @@ public class TagEditorManager implements Listener {
             customModelData = tag.getCustomModelData();
         }
         if (customModelData > 0) {
-            meta.setCustomModelData(customModelData);
+            GuiItemMetaCompat.setCustomModelData(meta, customModelData);
         }
 
         if (config.glow()) {
@@ -590,7 +590,7 @@ public class TagEditorManager implements Listener {
         }
 
         event.setCancelled(true);
-        if (event.getClickedInventory() != event.getView().getTopInventory()) {
+        if (event.getClickedInventory() != event.getInventory()) {
             return;
         }
 

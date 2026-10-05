@@ -114,7 +114,7 @@ final class GradientMenuItemFactory {
             GuiItemMetaCompat.setTooltipStyle(meta, apply(tooltip, placeholders));
         }
         if (customModelData > 0) {
-            meta.setCustomModelData(customModelData);
+            GuiItemMetaCompat.setCustomModelData(meta, customModelData);
         }
         if (glow) {
             GuiItemMetaCompat.setGlow(meta);

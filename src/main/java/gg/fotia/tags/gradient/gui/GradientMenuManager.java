@@ -176,7 +176,7 @@ public class GradientMenuManager implements Listener {
             return;
         }
         event.setCancelled(true);
-        if (event.getClickedInventory() != event.getView().getTopInventory()) {
+        if (event.getClickedInventory() != event.getInventory()) {
             return;
         }
 

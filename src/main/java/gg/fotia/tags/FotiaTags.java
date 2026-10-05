@@ -82,8 +82,8 @@ public class FotiaTags extends JavaPlugin {
         getCommand("fotiatags").setTabCompleter(tagCommand);
 
         // 注册PlaceholderAPI扩展
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new PlaceholderAPIHook(this).register();
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")
+                && new PlaceholderAPIHook(this).register()) {
             getLogger().info("PlaceholderAPI hook registered!");
         }
 
