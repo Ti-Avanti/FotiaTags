@@ -1,3 +1,6 @@
+# 玩家菜单显示引擎：inventory / futureui；未安装 FutureUI 时保留原菜单。
+ui-engine: inventory
+
 # 自定义称号图标选择菜单
 
 title: "<gold><!i>选择称号图标"

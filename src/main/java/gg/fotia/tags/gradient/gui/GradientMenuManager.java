@@ -65,7 +65,8 @@ public class GradientMenuManager implements Listener {
         openShop(player, 0);
     }
 
-    private void openStorage(Player player, int page) {
+    public void openStorage(Player player, int page) {
+        if (plugin.getFutureMenus().open(player, "gradient-storage", page, "")) return;
         if (!canOpen(player)) {
             return;
         }
@@ -76,7 +77,8 @@ public class GradientMenuManager implements Listener {
         openList(player, MenuType.STORAGE, storageMenu, effects, page, null);
     }
 
-    private void openShop(Player player, int page) {
+    public void openShop(Player player, int page) {
+        if (plugin.getFutureMenus().open(player, "gradient-shop", page, "")) return;
         if (!canOpen(player)) {
             return;
         }
@@ -88,14 +90,35 @@ public class GradientMenuManager implements Listener {
         openList(player, MenuType.SHOP, shopMenu, effects, page, null);
     }
 
-    private void openConfirm(Player player, String effectId, int shopPage) {
+    public void openConfirm(Player player, String effectId, int shopPage) {
         GradientEffect effect = plugin.getGradientManager().getEffect(effectId);
         if (!canOpen(player) || effect == null || !effect.enabled() || !effect.purchase().enabled()) {
             openShop(player, shopPage);
             return;
         }
+        if (plugin.getFutureMenus().open(player, "gradient-purchase-confirm", shopPage, effect.id())) return;
         openList(player, MenuType.CONFIRM, confirmMenu, List.of(effect), 0, effect.id(), shopPage);
     }
+
+    public List<GradientEffect> menuEffects(Player player, boolean shop) {
+        return plugin.getGradientManager().getEffects().stream().filter(GradientEffect::enabled)
+                .filter(effect -> shop ? effect.purchase().enabled() && (!shopMenu.hideOwned()
+                        || !plugin.getGradientManager().owns(player.getUniqueId(), effect.id()))
+                        : plugin.getGradientManager().owns(player.getUniqueId(), effect.id())).toList();
+    }
+    public boolean buyFromMenu(Player player, String id, java.util.function.Consumer<GradientPurchaseResult> completion) {
+        GradientEffect effect = plugin.getGradientManager().getEffect(id);
+        if (!player.hasPermission("fotiatags.effects") || !canOpen(player) || effect == null
+                || !effect.enabled() || !effect.purchase().enabled() || purchaseService.isProcessing(player.getUniqueId())) return false;
+        try {
+            plugin.getGradientManager().calculateExpireTime(effect.purchase().durationMillis());
+        } catch (IllegalArgumentException exception) {
+            plugin.getMessageManager().send(player, "gradient-operation-failed");
+            return false;
+        }
+        purchaseService.purchase(player, effect, completion); return true;
+    }
+    public String menuPreviewText() { return previewText; }
 
     private boolean canOpen(Player player) {
         if (!plugin.getGradientManager().isEnabled()) {

@@ -230,7 +230,7 @@ public class MenuManager implements Listener {
         }
     }
 
-    private void openCustomTagDetailMenu(Player player, String customTagId, int page) {
+    public void openCustomTagDetailMenu(Player player, String customTagId, int page) {
         if (!plugin.getCustomTagManager().isEnabled()) {
             plugin.getMessageManager().send(player, "custom-tag-disabled");
             return;
@@ -243,10 +243,11 @@ public class MenuManager implements Listener {
             return;
         }
 
+        if (plugin.getFutureMenus().open(player, "custom-tag-detail", page, customTagId)) return;
         openActionMenu(player, customTagDetailMenu, customTag, page, "custom-detail");
     }
 
-    private void openCustomTagDeleteMenu(Player player, String customTagId, int page) {
+    public void openCustomTagDeleteMenu(Player player, String customTagId, int page) {
         if (!plugin.getCustomTagManager().isDeleteEnabled()) {
             plugin.getMessageManager().send(player, "custom-tag-delete-disabled");
             openCustomTagDetailMenu(player, customTagId, page);
@@ -260,6 +261,7 @@ public class MenuManager implements Listener {
             return;
         }
 
+        if (plugin.getFutureMenus().open(player, "custom-tag-delete", page, customTagId)) return;
         openActionMenu(player, customTagDeleteMenu, customTag, page, "custom-delete");
     }
 
@@ -461,6 +463,7 @@ public class MenuManager implements Listener {
     }
 
     public void openTagSelectMenu(Player player, int page) {
+        if (plugin.getFutureMenus().open(player, "tag-select", page, "")) return;
         PlayerTagData data = plugin.getTagManager().getPlayerData(player.getUniqueId());
         List<String> ownedTags = data != null ? data.getValidTags() : Collections.emptyList();
         String currentTag = data != null ? data.getCurrentTag() : null;

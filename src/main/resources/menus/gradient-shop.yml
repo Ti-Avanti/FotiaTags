@@ -1,3 +1,6 @@
+# 玩家菜单显示引擎：inventory / futureui；未安装 FutureUI 时保留原菜单。
+ui-engine: inventory
+
 # 动态效果购买菜单；true 表示不显示玩家已拥有的效果
 hide-owned: true
 title: "<!i><gradient:#55FFFF:#FFD700>动态效果商店</gradient> <gray>(%page%/%total_pages%)"

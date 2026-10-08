@@ -72,7 +72,18 @@ public class GradientManager {
         if (effect == null || !effect.enabled() || !effect.appliesTo(target)) {
             return text;
         }
-        return GradientFrameRenderer.render(text, effect, System.currentTimeMillis() / 50L);
+        long tick = System.currentTimeMillis() / 50L;
+        var customMenus = plugin.getCustomTagManager();
+        var customTag = plugin.getTagManager().getCustomTag(uuid, plugin.getTagManager().getCurrentTagId(uuid));
+        if (customMenus != null && customMenus.isEnabled() && customTag != null) {
+            String display = target == GradientTarget.PREFIX
+                    ? customMenus.getDisplayPrefix(customTag) : customMenus.getDisplaySuffix(customTag);
+            if (text.equals(display)) {
+                String body = target == GradientTarget.PREFIX ? customTag.getPrefix() : customTag.getSuffix();
+                return customMenus.formatDisplayPart(GradientFrameRenderer.render(body, effect, tick));
+            }
+        }
+        return GradientFrameRenderer.render(text, effect, tick);
     }
 
     public boolean owns(UUID uuid, String effectId) {

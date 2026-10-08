@@ -148,33 +148,11 @@ public class CustomTagManager implements Listener {
     }
 
     public String getDisplayPrefix(CustomTag customTag) {
-        if (customTag == null) {
-            return "";
-        }
-        if (!displayWrapperEnabled) {
-            return customTag.getPrefix();
-        }
-
-        String prefix = safeText(customTag.getPrefix());
-        if (prefix.isEmpty()) {
-            return "";
-        }
-        return safeText(displayWrapperLeft) + prefix + safeText(displayWrapperRight);
+        return customTag == null ? "" : formatDisplayPart(customTag.getPrefix());
     }
 
     public String getDisplaySuffix(CustomTag customTag) {
-        if (customTag == null) {
-            return "";
-        }
-        if (!displayWrapperEnabled) {
-            return customTag.getSuffix();
-        }
-
-        String suffix = safeText(customTag.getSuffix());
-        if (suffix.isEmpty()) {
-            return "";
-        }
-        return safeText(displayWrapperLeft) + suffix + safeText(displayWrapperRight);
+        return customTag == null ? "" : formatDisplayPart(customTag.getSuffix());
     }
 
     private String safeText(String text) {
@@ -182,6 +160,7 @@ public class CustomTagManager implements Listener {
     }
 
     public void openCustomMenu(Player player) {
+        if (plugin.getFutureMenus().open(player, "custom-tag", 0, "")) return;
         if (!enabled) {
             plugin.getMessageManager().send(player, "custom-tag-disabled");
             return;
@@ -196,6 +175,7 @@ public class CustomTagManager implements Listener {
     }
 
     public void openIconMenu(Player player) {
+        if (plugin.getFutureMenus().open(player, "custom-tag-icons", 0, "")) return;
         if (!enabled) {
             plugin.getMessageManager().send(player, "custom-tag-disabled");
             return;
@@ -717,10 +697,14 @@ public class CustomTagManager implements Listener {
     }
 
     private void handleConfirm(Player player) {
+        handleConfirm(player, () -> openCustomMenu(player));
+    }
+
+    private void handleConfirm(Player player, Runnable redraw) {
         CustomTagDraft draft = getDraft(player);
         if (!draft.isComplete(prefixEditable, suffixEditable) || !icons.containsKey(draft.iconId())) {
             plugin.getMessageManager().send(player, "custom-tag-incomplete");
-            openCustomMenu(player);
+            redraw.run();
             return;
         }
 
@@ -733,7 +717,7 @@ public class CustomTagManager implements Listener {
         if (hasReachedMaxOwned(player)) {
             purchaseOperations.release(playerId);
             sendLocked(player);
-            openCustomMenu(player);
+            redraw.run();
             return;
         }
 
@@ -743,7 +727,7 @@ public class CustomTagManager implements Listener {
         if (textFilter.findViolation(customTag.getPrefix() + customTag.getSuffix()).isPresent()) {
             purchaseOperations.release(playerId);
             plugin.getMessageManager().send(player, "custom-tag-blocked-word");
-            openCustomMenu(player);
+            redraw.run();
             return;
         }
 
@@ -764,10 +748,10 @@ public class CustomTagManager implements Listener {
             return;
         }
 
-        persistCustomTag(player, customTag);
+        persistCustomTag(player, customTag, redraw);
     }
 
-    private void persistCustomTag(Player player, CustomTag customTag) {
+    private void persistCustomTag(Player player, CustomTag customTag, Runnable redraw) {
         UUID playerId = player.getUniqueId();
         try {
             plugin.getDatabaseManager().saveCustomTag(playerId, customTag)
@@ -783,7 +767,7 @@ public class CustomTagManager implements Listener {
                                     if (!refunded) {
                                         plugin.getMessageManager().send(player, "custom-tag-refund-failed");
                                     }
-                                    openCustomMenu(player);
+                                    redraw.run();
                                 }
                                 if (!refunded) {
                                     plugin.getLogger().severe("Failed to refund " + customTag.getPurchasePrice()
@@ -796,7 +780,7 @@ public class CustomTagManager implements Listener {
                             drafts.remove(playerId);
                             if (player.isOnline()) {
                                 plugin.getMessageManager().send(player, "custom-tag-created");
-                                openCustomMenu(player);
+                                redraw.run();
                             }
                         } finally {
                             purchaseOperations.release(playerId);
@@ -812,6 +796,42 @@ public class CustomTagManager implements Listener {
                 plugin.getMessageManager().send(player, "custom-tag-refund-failed");
             }
         }
+    }
+
+    /** 显示层读取草稿快照；所有编辑仍复用原文本验证和购买流程。 */
+    public record MenuDraft(String prefix, String suffix, String iconId, String preview,
+                            boolean prefixEditable, boolean suffixEditable, boolean complete, boolean locked) {}
+    public MenuDraft menuDraft(Player player) {
+        CustomTagDraft draft = getDraft(player);
+        return new MenuDraft(draft.prefix(), draft.suffix(), draft.iconId(),
+                getDraftDisplayPrefix(draft.prefix()) + getDraftDisplaySuffix(draft.suffix()),
+                prefixEditable, suffixEditable, draft.isComplete(prefixEditable, suffixEditable) && icons.containsKey(draft.iconId()),
+                hasReachedMaxOwned(player) || purchaseOperations.isLocked(player.getUniqueId()));
+    }
+    public List<CustomTagIcon> menuIcons() { return List.copyOf(icons.values()); }
+    public boolean applyMenuText(Player player, String part, String input) {
+        if (!menuEditAllowed(player) || !Set.of("prefix", "suffix").contains(part)) return false;
+        InputType type = part.equals("prefix") ? InputType.PREFIX : InputType.SUFFIX;
+        if (!isPartEditable(type)) return false;
+        if (!validateText(player, input, type == InputType.PREFIX ? maxPrefixLength : maxSuffixLength)) return false;
+        CustomTagDraft draft = getDraft(player);
+        drafts.put(player.getUniqueId(), type == InputType.PREFIX ? draft.withPrefix(input) : draft.withSuffix(input));
+        return true;
+    }
+    public boolean applyMenuIcon(Player player, String id) {
+        if (!menuEditAllowed(player) || !icons.containsKey(id)) return false;
+        drafts.put(player.getUniqueId(), getDraft(player).withIconId(id)); return true;
+    }
+    public void confirmFromMenu(Player player, Runnable redraw) {
+        if (!menuEditAllowed(player)) { redraw.run(); return; }
+        boolean[] completed = {false};
+        Runnable once = () -> { if (!completed[0]) { completed[0] = true; redraw.run(); } };
+        handleConfirm(player, once);
+        if (!purchaseOperations.isLocked(player.getUniqueId())) once.run();
+    }
+    private boolean menuEditAllowed(Player player) {
+        return enabled && player.hasPermission("fotiatags.custom") && plugin.getTagManager().getPlayerData(player.getUniqueId()) != null
+                && !hasReachedMaxOwned(player) && !purchaseOperations.isLocked(player.getUniqueId());
     }
 
     private CustomTagDraft getDraft(Player player) {
@@ -957,21 +977,21 @@ public class CustomTagManager implements Listener {
     }
 
     private String getDraftDisplayPrefix(String prefix) {
-        return getDraftDisplayPart(prefix);
+        return formatDisplayPart(prefix);
     }
 
     private String getDraftDisplaySuffix(String suffix) {
-        return getDraftDisplayPart(suffix);
+        return formatDisplayPart(suffix);
     }
 
-    private String getDraftDisplayPart(String text) {
+    public String formatDisplayPart(String text) {
         if (text == null || text.isEmpty()) {
             return "";
         }
         if (!displayWrapperEnabled) {
             return text;
         }
-        return safeText(displayWrapperLeft) + text + safeText(displayWrapperRight);
+        return gg.fotia.tags.util.WrappedTagText.format(text, displayWrapperLeft, displayWrapperRight);
     }
 
     private String partStatus(boolean editable) {

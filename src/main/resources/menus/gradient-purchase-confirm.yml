@@ -1,3 +1,6 @@
+# 玩家菜单显示引擎：inventory / futureui；未安装 FutureUI 时保留原菜单。
+ui-engine: inventory
+
 # 动态效果购买确认菜单
 title: "<!i><gold>确认购买动态效果"
 size: 27

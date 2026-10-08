@@ -12,6 +12,8 @@ public final class PlayerOperationLock {
         return uuid != null && lockedPlayers.add(uuid);
     }
 
+    public boolean isLocked(UUID uuid) { return uuid != null && lockedPlayers.contains(uuid); }
+
     public void release(UUID uuid) {
         if (uuid != null) {
             lockedPlayers.remove(uuid);

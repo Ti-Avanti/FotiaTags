@@ -19,6 +19,8 @@ public class GradientPurchaseService {
         this.plugin = plugin;
     }
 
+    public boolean isProcessing(UUID uuid) { return operations.isLocked(uuid); }
+
     public void purchase(Player player, GradientEffect effect, Consumer<GradientPurchaseResult> completion) {
         UUID uuid = player.getUniqueId();
         if (!operations.tryAcquire(uuid)) {

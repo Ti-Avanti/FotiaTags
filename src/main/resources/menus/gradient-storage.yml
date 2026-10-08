@@ -1,3 +1,6 @@
+# 玩家菜单显示引擎：inventory / futureui；未安装 FutureUI 时保留原菜单。
+ui-engine: inventory
+
 # 玩家已拥有的动态效果仓库
 title: "<!i><gradient:#FFD700:#55FFFF>动态效果仓库</gradient> <gray>(%page%/%total_pages%)"
 size: 54

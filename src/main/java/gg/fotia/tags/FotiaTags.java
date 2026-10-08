@@ -36,6 +36,7 @@ public class FotiaTags extends JavaPlugin {
     private MenuManager menuManager;
     private TagEditorManager tagEditorManager;
     private PlayerTagAdminManager playerTagAdminManager;
+    private gg.fotia.tags.gui.TagMenuBridge futureMenus = gg.fotia.tags.gui.TagMenuBridge.NONE;
 
     @Override
     public void onEnable() {
@@ -75,6 +76,7 @@ public class FotiaTags extends JavaPlugin {
         // 初始化称号编辑器
         this.tagEditorManager = new TagEditorManager(this);
         this.playerTagAdminManager = new PlayerTagAdminManager(this);
+        loadFutureMenus();
 
         // 注册命令
         TagCommand tagCommand = new TagCommand(this);
@@ -92,6 +94,7 @@ public class FotiaTags extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        futureMenus.close();
         if (gradientManager != null) {
             gradientManager.shutdown();
         }
@@ -134,6 +137,8 @@ public class FotiaTags extends JavaPlugin {
     }
 
     public void reload() {
+        futureMenus.close();
+        futureMenus = gg.fotia.tags.gui.TagMenuBridge.NONE;
         configManager.loadConfigs();
         messageManager.reload();
         paymentManager.reload();
@@ -146,7 +151,20 @@ public class FotiaTags extends JavaPlugin {
         menuManager.loadMenus();
         tagEditorManager.reload();
         playerTagAdminManager.reload();
+        loadFutureMenus();
     }
+
+    private void loadFutureMenus() {
+        try {
+            var settings = gg.fotia.tags.gui.TagMenuSettings.load(this);
+            if (Bukkit.getPluginManager().isPluginEnabled("FutureUI"))
+                futureMenus = new gg.fotia.tags.gui.futureui.FutureTagMenu(this, settings);
+        } catch (RuntimeException | LinkageError error) {
+            getLogger().warning("FutureUI 称号菜单不可用: " + error.getMessage());
+        }
+    }
+
+    public gg.fotia.tags.gui.TagMenuBridge getFutureMenus() { return futureMenus; }
 
     public static FotiaTags getInstance() {
         return instance;

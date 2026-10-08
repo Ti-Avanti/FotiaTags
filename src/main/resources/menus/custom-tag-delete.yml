@@ -1,3 +1,6 @@
+# 玩家菜单显示引擎：inventory / futureui；未安装 FutureUI 时保留原菜单。
+ui-engine: inventory
+
 # 自定义称号删除确认菜单
 
 title: "<red><!i>删除自定义称号"

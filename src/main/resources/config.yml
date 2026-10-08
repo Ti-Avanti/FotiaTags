@@ -92,6 +92,7 @@ custom-tags:
   display-wrapper:
     # 是否在展示自定义称号时自动包裹左右符号
     enabled: true
+    # 包裹符号与正文独立解析样式，正文的颜色、加粗及动态渐变不会影响左右符号。
     # 左侧包裹符号，支持 &、§ 和 MiniMessage 颜色
     left: "["
     # 右侧包裹符号，支持 &、§ 和 MiniMessage 颜色
