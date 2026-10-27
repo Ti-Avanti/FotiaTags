@@ -17,6 +17,7 @@ import java.util.concurrent.*;
 public class SQLiteManager implements DatabaseManager {
 
     private final FotiaTags plugin;
+    private final gg.fotia.basictool.bridge.storage.SourceEntitlements levelRewards = new gg.fotia.basictool.bridge.storage.SourceEntitlements("fotiatags_level_rewards");
     private Connection connection;
     private final Object lock = new Object();
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -50,6 +51,7 @@ public class SQLiteManager implements DatabaseManager {
     }
 
     private void createTables() throws SQLException {
+        levelRewards.initialize(connection);
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS fotiatags_players (
@@ -230,6 +232,8 @@ public class SQLiteManager implements DatabaseManager {
 
             synchronized (lock) {
             try {
+                data.externalTags(levelRewards.active(connection, uuid));
+
                 // 加载当前称号
                 try (PreparedStatement stmt = connection.prepareStatement(
                         "SELECT current_tag, current_gradient FROM fotiatags_players WHERE uuid = ?")) {
@@ -710,6 +714,24 @@ public class SQLiteManager implements DatabaseManager {
                 plugin.getLogger().severe("Failed to load player profiles: " + e.getMessage());
                 throw new CompletionException(e);
             }
+            }
+        }, executor);
+    }
+
+    @Override
+    public CompletableFuture<Void> applyLevelReward(UUID player, String source, String tag, long expires, long version, boolean revoke) {
+        return CompletableFuture.runAsync(() -> {
+            synchronized (lock) {
+                try {
+                    
+                    boolean autoCommit = connection.getAutoCommit();
+                    connection.setAutoCommit(false);
+                    try {
+                        levelRewards.apply(connection, player, source, tag, expires, version, revoke);
+                        connection.commit();
+                    } catch (Exception error) { connection.rollback(); throw error; }
+                    finally { connection.setAutoCommit(autoCommit); }
+                } catch (SQLException error) { throw new CompletionException(error); }
             }
         }, executor);
     }

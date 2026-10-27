@@ -40,6 +40,7 @@
     </repositories>
 
     <dependencies>
+        <dependency><groupId>gg.fotia</groupId><artifactId>basictool-common</artifactId><version>1.0.0-SNAPSHOT</version><scope>provided</scope></dependency>
         <dependency>
             <groupId>gg.fotia</groupId><artifactId>FutureUI</artifactId><version>1.0.0</version>
             <scope>provided</scope>

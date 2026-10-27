@@ -23,6 +23,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class FotiaTags extends JavaPlugin {
 
     private static FotiaTags instance;
+    private AutoCloseable levelRewards;
     private ConfigManager configManager;
     private MessageManager messageManager;
     private DatabaseManager databaseManager;
@@ -89,11 +90,13 @@ public class FotiaTags extends JavaPlugin {
             getLogger().info("PlaceholderAPI hook registered!");
         }
 
+        if (Bukkit.getPluginManager().isPluginEnabled("BasicTool")) levelRewards = gg.fotia.tags.hook.LevelRewards.register(this);
         getLogger().info("FotiaTags has been enabled!");
     }
 
     @Override
     public void onDisable() {
+        if (levelRewards != null) try { levelRewards.close(); } catch (Exception error) { getLogger().warning(error.getClass().getSimpleName()); }
         futureMenus.close();
         if (gradientManager != null) {
             gradientManager.shutdown();

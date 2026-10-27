@@ -137,7 +137,7 @@ public class TagManager implements Listener {
         refreshPlayerData(player.getUniqueId());
     }
 
-    private void refreshPlayerData(UUID uuid) {
+    public void refreshPlayerData(UUID uuid) {
         plugin.getDatabaseManager().loadPlayerData(uuid)
                 .thenAccept(data -> {
                     runSyncIfEnabled(() -> {
@@ -370,7 +370,7 @@ public class TagManager implements Listener {
             if (isCustomTagId(currentTag)) {
                 return "";
             }
-            return currentTag;
+            return data.hasTag(currentTag) ? currentTag : getDefaultTag();
         }
         if (defaultTag == null || defaultTag.isEmpty() || defaultTag.equalsIgnoreCase("disabled")) {
             return "";

@@ -28,3 +28,22 @@ replay_pid*
 /build/
 /.gradle/
 /.codegraph/
+
+# 本地构建产物、开发缓存与环境配置
+/.omx/
+/.codex/
+/.idea/
+/.vscode/
+/runtime/
+/runtime-*/
+/dist/
+**/target/
+**/build/
+**/node_modules/
+*.iml
+.env
+.env.*
+!.env.example
+!.env.template
+/nul
+/_nul

@@ -12,6 +12,17 @@ public class PlayerTagData {
     private final Map<String, CustomTag> customTags;
     private final Map<String, Long> ownedTags; // tagId -> expireTime (-1 = permanent)
     private final PlayerGradientData gradientData;
+    private Map<String, Long> externalTags = Map.of();
+
+    public void externalTags(Map<String, Long> values) { externalTags = Map.copyOf(values); }
+
+    private long effectiveExpiry(String id) {
+        long own = ownedTags.getOrDefault(id, 0L);
+        Long external = externalTags.get(id);
+        if (external == null || external > 0 && external <= System.currentTimeMillis()) return own;
+        if (own == -1 || external == 0) return -1;
+        return Math.max(own, external);
+    }
 
     public PlayerTagData(UUID uuid) {
         this.uuid = uuid;
@@ -26,6 +37,7 @@ public class PlayerTagData {
     }
 
     public String getCurrentTag() {
+        if (currentTag != null && !currentTag.startsWith("custom:") && !currentTag.equals("__custom__") && isTagExpired(currentTag)) return null;
         return currentTag;
     }
 
@@ -102,18 +114,12 @@ public class PlayerTagData {
     }
 
     public boolean hasTag(String tagId) {
-        return ownedTags.containsKey(tagId) && !isTagExpired(tagId);
+        return !isTagExpired(tagId);
     }
 
     public boolean isTagExpired(String tagId) {
-        Long expireTime = ownedTags.get(tagId);
-        if (expireTime == null) {
-            return true;
-        }
-        if (expireTime == -1) {
-            return false; // permanent
-        }
-        return System.currentTimeMillis() > expireTime;
+        long expiry = effectiveExpiry(tagId);
+        return expiry != -1 && expiry <= System.currentTimeMillis();
     }
 
     public void addTag(String tagId, long expireTime) {
@@ -122,23 +128,21 @@ public class PlayerTagData {
 
     public void removeTag(String tagId) {
         ownedTags.remove(tagId);
-        if (tagId.equals(currentTag)) {
+        if (tagId.equals(currentTag) && !hasTag(tagId)) {
             currentTag = null;
         }
     }
 
     public List<String> getValidTags() {
         List<String> validTags = new ArrayList<>();
-        for (Map.Entry<String, Long> entry : ownedTags.entrySet()) {
-            if (!isTagExpired(entry.getKey())) {
-                validTags.add(entry.getKey());
-            }
-        }
+        Set<String> ids = new LinkedHashSet<>(ownedTags.keySet());
+        ids.addAll(externalTags.keySet());
+        for (String id : ids) if (hasTag(id)) validTags.add(id);
         return validTags;
     }
 
     public long getTagExpireTime(String tagId) {
-        return ownedTags.getOrDefault(tagId, 0L);
+        return effectiveExpiry(tagId);
     }
 
     public List<String> checkAndRemoveExpiredTags() {

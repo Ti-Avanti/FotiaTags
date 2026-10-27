@@ -9,6 +9,8 @@ import java.util.concurrent.CompletableFuture;
 
 public interface DatabaseManager {
 
+    CompletableFuture<Void> applyLevelReward(UUID player, String source, String tag, long expires, long version, boolean revoke);
+
     void initialize();
 
     void close();
