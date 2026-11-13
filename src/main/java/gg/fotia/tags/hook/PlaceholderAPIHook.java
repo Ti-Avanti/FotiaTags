@@ -2,6 +2,7 @@ package gg.fotia.tags.hook;
 
 import gg.fotia.tags.FotiaTags;
 import gg.fotia.tags.gradient.GradientTarget;
+import gg.fotia.tags.hook.placeholders.PlaceholderQuery;
 import gg.fotia.tags.util.LegacyColorConverter;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
@@ -38,6 +39,12 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
 
     @Override
     public @Nullable String onRequest(OfflinePlayer player, @NotNull String params) {
+        PlaceholderQuery query = PlaceholderQuery.parse(params);
+        if (query == null) return null;
+        if (query.target() != null) {
+            return plugin.getTargetTagService().query(query.field(), player, query.target());
+        }
+        params = query.field();
         if (player == null) {
             return "";
         }

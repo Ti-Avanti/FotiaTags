@@ -2,6 +2,8 @@
 
 prefix: "<gray>[<gold>FotiaTags</gold>]</gray> "
 
+placeholder-target-load-failed: "<!i>Target player tag lookup failed. Check the database connection or nested placeholder; see the exception below."
+
 # Success messages
 tag-given: "<green>Successfully gave <white>{player}</white> the tag <white>{tag}</white>, duration: <white>{duration}</white>"
 tag-removed: "<green>Successfully removed tag <white>{tag}</white> from <white>{player}</white>"

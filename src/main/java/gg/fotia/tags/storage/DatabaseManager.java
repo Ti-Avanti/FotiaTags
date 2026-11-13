@@ -17,6 +17,9 @@ public interface DatabaseManager {
 
     CompletableFuture<PlayerTagData> loadPlayerData(UUID uuid);
 
+    /** 异步查询已保存的玩家名或 UUID；未知或存在同名歧义时返回空。 */
+    CompletableFuture<java.util.Optional<UUID>> findPlayerId(String identity);
+
     CompletableFuture<Void> savePlayerData(PlayerTagData data);
 
     CompletableFuture<Void> addPlayerTag(UUID uuid, String tagId, long expireTime);

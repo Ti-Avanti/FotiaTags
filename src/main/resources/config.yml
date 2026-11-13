@@ -22,6 +22,26 @@ settings:
   # MySQL跨服数据同步间隔（秒），仅database.type为mysql时生效，0表示关闭
   cross-server-sync-interval: 60
 
+# 通用目标玩家 PAPI；原有不带目标的变量保持不变。
+# 示例：%fotiatags_prefix_Steve% 或 %fotiatags_prefix_玩家UUID%
+# 也可写 %fotiatags_prefix_{其他插件的玩家名或UUID变量}%（内部变量使用大括号）。
+# prefix、suffix、prefix2、suffix2、tag、tag_name、count 均支持指定目标。
+placeholders:
+  target-player:
+    enabled: true
+    # 在线玩家快照缓存时间（tick）；1 tick = 50 毫秒。
+    online-cache-ticks: 1
+    # 离线数据异步刷新间隔（秒）；称号过期会立即按默认称号配置回退。
+    offline-cache-seconds: 30
+    # 每个查询缓存的最大条目数及并发加载上限，避免排行榜高频刷新造成重复查询。
+    max-cache-size: 1000
+    max-pending-requests: 64
+    # 首次异步加载时的文本；展示插件下一次刷新后即可获得加载结果。
+    loading-text: ""
+    # 玩家未知、名字存在歧义、嵌套变量未解析或功能关闭时的文本。
+    # 不会使用观看者的称号替代失败的查询；名字存在歧义时请改用 UUID。
+    unavailable-text: ""
+
 # 玩家显示功能
 # 开启后可以把当前称号直接显示到玩家头顶名牌、Tab列表名字和聊天格式中。
 player-display:

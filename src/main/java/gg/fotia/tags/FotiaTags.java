@@ -12,6 +12,7 @@ import gg.fotia.tags.gradient.GradientManager;
 import gg.fotia.tags.gradient.gui.GradientMenuManager;
 import gg.fotia.tags.hook.PaymentManager;
 import gg.fotia.tags.hook.PlaceholderAPIHook;
+import gg.fotia.tags.hook.placeholders.TargetTagService;
 import gg.fotia.tags.particle.ParticleManager;
 import gg.fotia.tags.storage.DatabaseManager;
 import gg.fotia.tags.storage.MySQLManager;
@@ -24,6 +25,7 @@ public class FotiaTags extends JavaPlugin {
 
     private static FotiaTags instance;
     private AutoCloseable levelRewards;
+    private TargetTagService targetTagService;
     private ConfigManager configManager;
     private MessageManager messageManager;
     private DatabaseManager databaseManager;
@@ -85,17 +87,21 @@ public class FotiaTags extends JavaPlugin {
         getCommand("fotiatags").setTabCompleter(tagCommand);
 
         // 注册PlaceholderAPI扩展
-        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")
-                && new PlaceholderAPIHook(this).register()) {
-            getLogger().info("PlaceholderAPI hook registered!");
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            targetTagService = new TargetTagService(this);
+            if (new PlaceholderAPIHook(this).register()) getLogger().info("PlaceholderAPI hook registered!");
         }
 
-        if (Bukkit.getPluginManager().isPluginEnabled("BasicTool")) levelRewards = gg.fotia.tags.hook.LevelRewards.register(this);
+        if (Bukkit.getPluginManager().isPluginEnabled("BasicTool")) {
+            levelRewards = gg.fotia.tags.hook.LevelRewards.register(this);
+            gg.fotia.tags.hook.ProfileTitleMenu.register(this);
+        }
         getLogger().info("FotiaTags has been enabled!");
     }
 
     @Override
     public void onDisable() {
+        if (targetTagService != null) targetTagService.close();
         if (levelRewards != null) try { levelRewards.close(); } catch (Exception error) { getLogger().warning(error.getClass().getSimpleName()); }
         futureMenus.close();
         if (gradientManager != null) {
@@ -154,7 +160,13 @@ public class FotiaTags extends JavaPlugin {
         menuManager.loadMenus();
         tagEditorManager.reload();
         playerTagAdminManager.reload();
+        if (targetTagService != null) targetTagService.reload();
         loadFutureMenus();
+    }
+
+    /** 获取通用目标玩家称号查询服务，仅在 PlaceholderAPI 启用时存在。 */
+    public TargetTagService getTargetTagService() {
+        return targetTagService;
     }
 
     private void loadFutureMenus() {

@@ -41,6 +41,7 @@ public class MenuManager implements Listener {
     private List<Integer> tagSlots = new ArrayList<>();
     private MenuItemConfig selectedTagItem;
     private MenuItemConfig unselectedTagItem;
+    private List<String> profileLore = List.of();
 
     // 翻页按钮配置
     private int prevPageSlot = 45;
@@ -132,6 +133,9 @@ public class MenuManager implements Listener {
             unselectedTagItem.lore = Arrays.asList("", "<gray>前缀: %tag_prefix%", "<gray>后缀: %tag_suffix%", "<gray>过期时间: %tag_expire%", "", "<yellow>点击选择此称号");
             unselectedTagItem.glow = false;
         }
+
+        profileLore = config.getStringList("tag-item.profile-lore");
+        if (!config.contains("tag-item.profile-lore")) profileLore = List.of("<!i>%tag_prefix%", "<!i>%tag_suffix%");
 
         // 加载翻页配置
         ConfigurationSection paginationSection = config.getConfigurationSection("pagination");
@@ -638,6 +642,21 @@ public class MenuManager implements Listener {
         meta.addItemFlags(ItemFlag.values());
         item.setItemMeta(meta);
         return item;
+    }
+
+    /** 为个人主页构造当前实际佩戴称号，复用选择菜单的完整物品外观。 */
+    public ItemStack equippedItem(Player player) {
+        var data = plugin.getTagManager().getPlayerData(player.getUniqueId());
+        if (data == null || data.getCurrentTag() == null || data.getCurrentTag().isEmpty()) return null;
+        String id = data.getCurrentTag();
+        var template = new MenuItemConfig();
+        template.material = selectedTagItem.material; template.name = selectedTagItem.name;
+        template.itemModel = selectedTagItem.itemModel; template.tooltip = selectedTagItem.tooltip;
+        template.glow = selectedTagItem.glow; template.lore = profileLore;
+        var custom = data.getCustomTags().get(id);
+        if (custom != null) return createCustomTagItem(template, custom, id, true);
+        var tag = plugin.getTagManager().getTag(id);
+        return tag == null ? null : createTagItem(template, tag, data, true);
     }
 
     private ItemStack createTagItem(MenuItemConfig template, Tag tag, PlayerTagData data, boolean isSelected) {

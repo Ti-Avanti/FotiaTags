@@ -295,6 +295,19 @@ public class SQLiteManager implements DatabaseManager {
     }
 
     @Override
+    public CompletableFuture<java.util.Optional<UUID>> findPlayerId(String identity) {
+        return CompletableFuture.supplyAsync(() -> {
+            synchronized (lock) {
+                try {
+                    return PlayerIdentityLookup.find(connection, identity);
+                } catch (SQLException failure) {
+                    throw new CompletionException(failure);
+                }
+            }
+        }, executor);
+    }
+
+    @Override
     public CompletableFuture<Void> savePlayerData(PlayerTagData data) {
         UUID uuid = data.getUuid();
         String currentTag = data.getCurrentTag();
@@ -727,7 +740,9 @@ public class SQLiteManager implements DatabaseManager {
                     boolean autoCommit = connection.getAutoCommit();
                     connection.setAutoCommit(false);
                     try {
-                        levelRewards.apply(connection, player, source, tag, expires, version, revoke);
+                        if (source.startsWith("basictool:vip:") || source.startsWith("basictool:identity:"))
+                            VipTitleSelection.apply(connection, levelRewards, player, source, tag, expires, version, revoke);
+                        else levelRewards.apply(connection, player, source, tag, expires, version, revoke);
                         connection.commit();
                     } catch (Exception error) { connection.rollback(); throw error; }
                     finally { connection.setAutoCommit(autoCommit); }

@@ -41,6 +41,10 @@ items:
 
 # 称号物品模板
 tag-item:
+  # BasicTool 个人主页复用当前称号外观；在此配置详情，主页自行追加管理入口提示。
+  profile-lore:
+    - "<!i>%tag_prefix%"
+    - "<!i>%tag_suffix%"
   # 已选择的称号
   selected:
     material: PLAYER_HEAD

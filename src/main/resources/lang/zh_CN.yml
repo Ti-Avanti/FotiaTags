@@ -2,6 +2,8 @@
 
 prefix: "<gray>[<gold>FotiaTags</gold>]</gray> "
 
+placeholder-target-load-failed: "<!i>目标玩家称号变量加载失败，请检查数据库连接或嵌套变量；详细原因见下方异常。"
+
 # 成功消息
 tag-given: "<green>成功给予 <white>{player}</white> 称号 <white>{tag}</white>，时长: <white>{duration}</white>"
 tag-removed: "<green>成功移除 <white>{player}</white> 的称号 <white>{tag}</white>"
